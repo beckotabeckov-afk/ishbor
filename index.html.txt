@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ish Bor — AI Ovozli Yordamchi</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Nunito+Sans:wght@400;600&display=swap');
+
+:root {
+–sun: #FFD93D;
+–sun-dark: #F5A623;
+–green: #6BCB77;
+–blue: #4D96FF;
+–pink: #FF6B9D;
+–orange: #FF9F1C;
+–bg: #FFFBF0;
+–card: #FFFFFF;
+–text: #2D2D2D;
+–muted: #888;
+–radius: 28px;
+}
+
+- { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+font-family: ‘Nunito’, sans-serif;
+background: var(–bg);
+color: var(–text);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+overflow-x: hidden;
+}
+
+/* ── BACKGROUND BLOBS ── */
+.blob {
+position: fixed;
+border-radius: 50%;
+filter: blur(80px);
+opacity: 0.18;
+z-index: 0;
+pointer-events: none;
+}
+.blob1 { width:400px; height:400px; background:#FFD93D; top:-100px; left:-100px; animation: drift 8s ease-in-out infinite alternate; }
+.blob2 { width:300px; height:300px; background:#6BCB77; bottom:-80px; right:-60px; animation: drift 10s ease-in-out infinite alternate-reverse; }
+.blob3 { width:200px; height:200px; background:#4D96FF; top:40%; left:60%; animation: drift 12s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: translate(0,0); } to { transform: translate(30px, 20px); } }
+
+/* ── LAYOUT ── */
+.app { position:relative; z-index:1; width:100%; max-width:520px; min-height:100vh; display:flex; flex-direction:column; padding:20px 16px 32px; gap:16px; }
+
+/* ── HEADER ── */
+.header { display:flex; justify-content:space-between; align-items:center; }
+.logo { font-size:22px; font-weight:900; color:var(–text); display:flex; align-items:center; gap:8px; }
+.logo-badge { background:var(–sun); padding:4px 10px; border-radius:20px; font-size:13px; font-weight:800; color:#1a1a1a; }
+.api-setup { display:flex; gap:8px; align-items:center; }
+.api-input { padding:7px 12px; border:2px solid rgba(0,0,0,0.1); border-radius:12px; font-family:inherit; font-size:12px; width:180px; background:white; outline:none; transition:border-color 0.2s; }
+.api-input:focus { border-color:var(–sun-dark); }
+.api-save { padding:7px 14px; background:var(–sun); border:none; border-radius:12px; font-family:inherit; font-weight:800; font-size:12px; cursor:pointer; transition:transform 0.15s; }
+.api-save:hover { transform:scale(1.05); }
+
+/* ── PROGRESS ── */
+.progress-wrap { display:flex; flex-direction:column; gap:6px; }
+.progress-bar-bg { height:8px; background:rgba(0,0,0,0.06); border-radius:10px; overflow:hidden; }
+.progress-bar-fill { height:100%; background:linear-gradient(90deg, var(–sun), var(–sun-dark)); border-radius:10px; transition:width 0.5s cubic-bezier(0.4,0,0.2,1); }
+.progress-label { font-size:11px; color:var(–muted); font-weight:700; letter-spacing:1px; text-transform:uppercase; text-align:center; }
+
+/* ── FACE CARD ── */
+.face-card {
+background:white;
+border-radius:var(–radius);
+padding:28px 20px 24px;
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:16px;
+box-shadow: 0 4px 32px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+transition: box-shadow 0.3s;
+}
+.face-card.speaking { box-shadow: 0 0 0 4px var(–sun), 0 8px 40px rgba(255,217,61,0.25); }
+.face-card.listening { box-shadow: 0 0 0 4px var(–green), 0 8px 40px rgba(107,203,119,0.25); }
+.face-card.thinking { box-shadow: 0 0 0 4px var(–blue), 0 8px 40px rgba(77,150,255,0.2); }
+
+/* ── FACE SVG ── */
+#face-svg { width:200px; height:200px; }
+
+/* ── SUBTITLE ── */
+.subtitle {
+font-size:15px;
+line-height:1.55;
+text-align:center;
+color:var(–text);
+font-weight:600;
+min-height:48px;
+max-width:380px;
+transition:opacity 0.3s;
+}
+.subtitle.muted { color:var(–muted); font-weight:400; }
+
+/* ── STATUS PILL ── */
+.status-pill {
+display:inline-flex;
+align-items:center;
+gap:7px;
+padding:7px 16px;
+border-radius:50px;
+font-size:13px;
+font-weight:800;
+letter-spacing:0.3px;
+transition:all 0.3s;
+}
+.status-pill.idle     { background:#f0f0f0; color:#aaa; }
+.status-pill.speaking { background:#FFF3CD; color:#C68A00; }
+.status-pill.listening{ background:#D8F5DC; color:#2A7A34; }
+.status-pill.thinking { background:#D6E8FF; color:#1A5FBB; }
+.status-dot { width:8px; height:8px; border-radius:50%; }
+.status-pill.speaking .status-dot  { background:#F5A623; animation:blink 1s infinite; }
+.status-pill.listening .status-dot { background:#6BCB77; animation:blink 0.8s infinite; }
+.status-pill.thinking .status-dot  { background:#4D96FF; animation:blink 1.2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── MIC BUTTON ── */
+.mic-btn {
+width:72px; height:72px;
+border-radius:50%;
+border:none;
+cursor:pointer;
+display:flex; align-items:center; justify-content:center;
+font-size:30px;
+transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+position:relative;
+overflow:visible;
+}
+.mic-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none !important; }
+.mic-btn.idle     { background:var(–sun); color:#1a1a1a; }
+.mic-btn.idle:hover { transform:scale(1.1); }
+.mic-btn.recording { background:var(–green); color:white; animation:micPulse 1.5s infinite; }
+.mic-btn.recording:hover { transform:scale(1.05); }
+@keyframes micPulse {
+0%,100% { box-shadow:0 0 0 0 rgba(107,203,119,0.5); }
+50%      { box-shadow:0 0 0 16px rgba(107,203,119,0); }
+}
+
+/* ── WAVEFORM ── */
+.waveform { display:flex; align-items:center; gap:4px; height:32px; }
+.wave-bar { width:4px; border-radius:4px; background:var(–green); animation:wave 1s ease-in-out infinite; }
+.wave-bar:nth-child(1) { animation-delay:0s; }
+.wave-bar:nth-child(2) { animation-delay:0.1s; }
+.wave-bar:nth-child(3) { animation-delay:0.2s; }
+.wave-bar:nth-child(4) { animation-delay:0.3s; }
+.wave-bar:nth-child(5) { animation-delay:0.4s; }
+.wave-bar:nth-child(6) { animation-delay:0.2s; }
+.wave-bar:nth-child(7) { animation-delay:0.1s; }
+@keyframes wave {
+0%,100% { height:8px; opacity:0.4; }
+50%      { height:28px; opacity:1; }
+}
+
+/* ── VACANCY CARDS ── */
+.vacancy-list { display:flex; flex-direction:column; gap:10px; width:100%; }
+.vac-card {
+background:white;
+border:2px solid rgba(0,0,0,0.07);
+border-radius:18px;
+padding:14px 16px;
+cursor:pointer;
+transition:all 0.2s;
+display:flex;
+gap:12px;
+align-items:center;
+}
+.vac-card:hover { border-color:var(–sun); transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+.vac-card.selected { border-color:var(–sun-dark); background:#FFFBF0; box-shadow:0 0 0 4px rgba(245,166,35,0.15); }
+.vac-num { width:36px; height:36px; border-radius:12px; background:var(–sun); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:16px; flex-shrink:0; }
+.vac-info { flex:1; }
+.vac-title { font-weight:800; font-size:14px; margin-bottom:2px; }
+.vac-company { font-size:12px; color:var(–muted); }
+.vac-salary { font-weight:900; font-size:14px; color:var(–sun-dark); text-align:right; white-space:nowrap; }
+
+/* ── CV SUMMARY ── */
+.cv-card {
+background:white;
+border-radius:var(–radius);
+padding:24px;
+box-shadow:0 4px 24px rgba(0,0,0,0.07);
+width:100%;
+}
+.cv-header { display:flex; gap:14px; align-items:center; margin-bottom:16px; padding-bottom:16px; border-bottom:2px dashed #f0f0f0; }
+.cv-photo { width:64px; height:64px; border-radius:16px; object-fit:cover; border:3px solid var(–sun); }
+.cv-photo-placeholder { width:64px; height:64px; border-radius:16px; background:var(–sun); display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
+.cv-name { font-size:20px; font-weight:900; }
+.cv-job { font-size:13px; color:var(–muted); margin-top:3px; }
+.cv-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+.cv-field .label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(–muted); margin-bottom:3px; }
+.cv-field .value { font-size:13px; font-weight:700; }
+.cv-vacancy { background:linear-gradient(135deg, #FFF8E1, #FFF3CD); border-radius:14px; padding:14px 16px; margin-bottom:16px; border:1.5px solid var(–sun); }
+.cv-vacancy .label { font-size:10px; font-weight:700; letter-spacing:1px; color:var(–sun-dark); margin-bottom:4px; }
+.cv-vacancy .val { font-size:15px; font-weight:900; }
+.cv-vacancy .sub { font-size:12px; color:var(–muted); margin-top:2px; }
+.cv-status { display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:2px dashed #f0f0f0; }
+.sent-badge { background:#D8F5DC; color:#2A7A34; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:800; display:flex; align-items:center; gap:6px; }
+.cv-id { font-size:10px; color:#ccc; font-family:monospace; }
+
+/* ── BUTTONS ── */
+.btn-row { display:flex; gap:10px; width:100%; }
+.btn {
+flex:1; padding:14px; border-radius:16px; border:none; font-family:inherit;
+font-size:14px; font-weight:800; cursor:pointer; transition:all 0.2s;
+}
+.btn:hover { transform:translateY(-2px); }
+.btn-primary { background:var(–sun); color:#1a1a1a; }
+.btn-ghost { background:#f5f5f5; color:var(–muted); }
+.btn-big { width:100%; padding:16px; border-radius:18px; background:var(–sun); border:none; font-family:inherit; font-size:17px; font-weight:900; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; }
+.btn-big:hover { transform:scale(1.02); box-shadow:0 8px 24px rgba(245,166,35,0.35); }
+
+/* ── START SCREEN ── */
+#start-screen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; text-align:center; }
+.start-face { font-size:100px; line-height:1; animation:bounce 2s ease-in-out infinite; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+.start-title { font-size:40px; font-weight:900; line-height:1.1; }
+.start-title span { color:var(–sun-dark); }
+.start-sub { font-size:15px; color:var(–muted); line-height:1.6; max-width:320px; }
+
+/* ── CAMERA ── */
+.camera-wrap { width:100%; aspect-ratio:4/3; border-radius:var(–radius); overflow:hidden; background:#111; position:relative; }
+#camera-video { width:100%; height:100%; object-fit:cover; display:block; }
+.countdown-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; }
+.countdown-num { font-size:100px; font-weight:900; color:white; text-shadow:0 0 40px rgba(255,217,61,0.8); animation:countIn 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes countIn { from{transform:scale(2);opacity:0} to{transform:scale(1);opacity:1} }
+#captured-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:var(–radius); border:4px solid var(–sun); display:none; }
+
+/* ── HIDDEN ── */
+.hidden { display:none !important; }
+
+/* ── CONFETTI ── */
+#confetti-canvas { position:fixed; inset:0; pointer-events:none; z-index:999; }
+</style>
+
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+
+<div class="app">
+
+  <!-- API KEY SETUP -->
+
+  <div class="header">
+    <div class="logo">
+      <span>Ish Bor</span>
+      <span class="logo-badge">AI</span>
+    </div>
+    <div class="api-setup">
+      <input class="api-input" type="password" id="apiKeyInput" placeholder="Anthropic API key..." />
+      <button class="api-save" onclick="saveKey()">Saqlash</button>
+    </div>
+  </div>
+
+  <!-- START SCREEN -->
+
+  <div id="start-screen">
+    <div class="start-face">🤖</div>
+    <div>
+      <div class="start-title">Ish <span>Bor</span>!</div>
+      <div style="height:8px"></div>
+      <div class="start-sub">O'zbekistondagi birinchi ovozli AI ish qidirish yordamchisi.<br>Faqat gapiring — men tinglaymen.</div>
+    </div>
+
+```
+<div style="background:#FFF8E1;border:2px dashed #FFD93D;border-radius:16px;padding:14px 20px;font-size:12px;color:#666;line-height:1.7;max-width:320px;text-align:left;">
+  <div style="font-weight:800;color:#F5A623;margin-bottom:4px;">✅ Talab qilinadi:</div>
+  <div>🎙️ Mikrofon ruxsati</div>
+  <div>🌐 Google Chrome brauzer</div>
+  <div>🔑 Anthropic API key (yuqorida)</div>
+</div>
+
+<button class="btn-big" onclick="startApp()">
+  🎙️ Gaplashishni boshlash
+</button>
+<p style="font-size:11px;color:#bbb">Tugmani bosganingizda mikrofon so'raladi</p>
+```
+
+  </div>
+
+  <!-- MAIN APP (hidden until started) -->
+
+  <div id="main-app" class="hidden" style="display:flex;flex-direction:column;gap:14px;width:100%;">
+
+```
+<!-- Progress -->
+<div class="progress-wrap">
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-label" id="progressLabel">Boshlash...</div>
+</div>
+
+<!-- Face card -->
+<div class="face-card" id="faceCard">
+  <svg id="face-svg" viewBox="0 0 200 200">
+    <!-- glow -->
+    <defs>
+      <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <radialGradient id="faceGrad" cx="50%" cy="45%" r="55%">
+        <stop offset="0%" stop-color="#FFE566"/>
+        <stop offset="100%" stop-color="#FFD93D"/>
+      </radialGradient>
+    </defs>
+
+    <!-- face circle -->
+    <circle id="faceCircle" cx="100" cy="100" r="88" fill="url(#faceGrad)" stroke="#F5A623" stroke-width="3"/>
+
+    <!-- cheeks -->
+    <ellipse id="cheekL" cx="38" cy="120" rx="20" ry="13" fill="#FF9999" opacity="0.3"/>
+    <ellipse id="cheekR" cx="162" cy="120" rx="20" ry="13" fill="#FF9999" opacity="0.3"/>
+
+    <!-- LEFT EYE -->
+    <ellipse id="eyeLwhite" cx="72" cy="88" rx="22" ry="24" fill="white"/>
+    <ellipse id="eyeLpupil" cx="72" cy="92" rx="13" ry="15" fill="#2D2D2D"/>
+    <ellipse cx="78" cy="85" rx="5" ry="5" fill="white"/>
+    <!-- RIGHT EYE -->
+    <ellipse id="eyeRwhite" cx="128" cy="88" rx="22" ry="24" fill="white"/>
+    <ellipse id="eyeRpupil" cx="128" cy="92" rx="13" ry="15" fill="#2D2D2D"/>
+    <ellipse cx="134" cy="85" rx="5" ry="5" fill="white"/>
+
+    <!-- eyebrows -->
+    <path id="browL" d="M 55 64 Q 72 58 88 64" stroke="#2D2D2D" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path id="browR" d="M 112 64 Q 128 58 145 64" stroke="#2D2D2D" stroke-width="4" fill="none" stroke-linecap="round"/>
+
+    <!-- mouth -->
+    <path id="mouth" d="M 72 132 Q 100 140 128 132" stroke="#2D2D2D" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+    <!-- teeth (hidden by default) -->
+    <path id="teeth" d="M 75 134 Q 100 142 125 134 L 125 140 Q 100 148 75 140 Z" fill="white" opacity="0"/>
+
+    <!-- thinking dots -->
+    <circle id="dot1" cx="145" cy="65" r="6" fill="#4D96FF" opacity="0"/>
+    <circle id="dot2" cx="158" cy="52" r="5" fill="#4D96FF" opacity="0"/>
+    <circle id="dot3" cx="168" cy="40" r="4" fill="#4D96FF" opacity="0"/>
+
+    <!-- listen waves -->
+    <path id="wave1" d="M 168 80 Q 174 100 168 120" stroke="#6BCB77" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0"/>
+    <path id="wave2" d="M 176 72 Q 184 100 176 128" stroke="#6BCB77" stroke-width="3" fill="none" stroke-linecap="round" opacity="0"/>
+  </svg>
+
+  <!-- Status pill -->
+  <div class="status-pill idle" id="statusPill">
+    <div class="status-dot"></div>
+    <span id="statusText">Tayyor</span>
+  </div>
+
+  <!-- Subtitle -->
+  <div class="subtitle muted" id="subtitle">Savolingizga javob bering...</div>
+
+  <!-- Waveform (hidden) -->
+  <div class="waveform hidden" id="waveform">
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+  </div>
+</div>
+
+<!-- Camera -->
+<div class="camera-wrap hidden" id="cameraWrap">
+  <video id="camera-video" autoplay playsinline muted></video>
+  <div class="countdown-overlay hidden" id="countdownOverlay">
+    <div class="countdown-num" id="countdownNum">3</div>
+  </div>
+</div>
+<img id="captured-photo" src="" alt="photo">
+
+<!-- Vacancy list -->
+<div class="vacancy-list hidden" id="vacancyList"></div>
+
+<!-- CV summary -->
+<div class="cv-card hidden" id="cvSummary"></div>
+
+<!-- Mic button -->
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;" id="micArea">
+  <button class="mic-btn idle" id="micBtn" onclick="toggleMic()">🎙️</button>
+  <p style="font-size:11px;color:#bbb;font-weight:700;" id="micHint">Bosib gapiring</p>
+</div>
+
+<!-- Back / Reset -->
+<div class="btn-row" id="navBtns" style="display:none;">
+  <button class="btn btn-ghost" onclick="goBack()">← Orqaga</button>
+  <button class="btn btn-ghost" onclick="resetApp()">🔄 Yangi</button>
+</div>
+```
+
+  </div><!-- /main-app -->
+
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  CONFIG & STATE
+// ═══════════════════════════════════════════════════════════════════
+
+let ANTHROPIC_KEY = localStorage.getItem('ish_bor_key') || '';
+if (ANTHROPIC_KEY) document.getElementById('apiKeyInput').value = '••••••••';
+
+function saveKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val || val.startsWith('•')) return;
+  ANTHROPIC_KEY = val;
+  localStorage.setItem('ish_bor_key', val);
+  document.getElementById('apiKeyInput').value = '••••••••';
+  showToast('✓ API key saqlandi!');
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2D2D2D;color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999;animation:fadeUp 0.3s ease';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+const STEPS = [
+  'GREETING','NAME','AGE','REGION','DISTRICT','EDUCATION',
+  'SKILLS','EXPERIENCE','JOB_TYPE','WORK_REGION','SALARY','PHONE',
+  'MATCHING','VACANCY_SELECTION','CONFIRMATION','PHOTO','FAREWELL'
+];
+
+const STEP_LABELS = {
+  GREETING:'Salomlashish', NAME:"Ism so'ralmoqda", AGE:"Yosh so'ralmoqda",
+  REGION:"Viloyat so'ralmoqda", DISTRICT:"Tuman so'ralmoqda", EDUCATION:"Ta'lim so'ralmoqda",
+  SKILLS:"Ko'nikmalar so'ralmoqda", EXPERIENCE:"Tajriba so'ralmoqda", JOB_TYPE:"Ish turi so'ralmoqda",
+  WORK_REGION:"Ish joyi so'ralmoqda", SALARY:"Maosh so'ralmoqda", PHONE:"Telefon so'ralmoqda",
+  MATCHING:"Qidirilmoqda...", VACANCY_SELECTION:"Vakansiya tanlash", CONFIRMATION:"Tasdiqlash",
+  PHOTO:"Tabassum vaqti!", FAREWELL:"Xayrlashuv"
+};
+
+const QUESTIONS = {
+  GREETING: "Assalomu aleykum! Bandlik vazirligiga xush kelibsiz! Men — Ish Bor, sizning ovozli ish topish yordamchingizman. Bugun men sizga eng mos ish topishda yordam beraman. Boshlashga tayyormisiz?",
+  NAME: "Juda yaxshi! Keling, tanishib olamiz. To'liq ismingizni ayting.",
+  AGE: "Yoshingiz nechida?",
+  REGION: "Hozirda qaysi viloyatda istiqomat qilasiz?",
+  DISTRICT: "Qaysi tumanda yashaysiz?",
+  EDUCATION: "Ta'limingiz darajasi qanday? Maktab, kollej, bakalavr yoki magistr?",
+  SKILLS: "Qaysi sohalarda ko'nikmalaringiz bor? Bir nechta aytishingiz mumkin.",
+  EXPERIENCE: "Bu sohada necha yillik tajribangiz bor?",
+  JOB_TYPE: "Qanday sohada yoki lavozimda ishlashni xohlaysiz?",
+  WORK_REGION: "Qaysi viloyatda ishlashni afzal ko'rasiz?",
+  SALARY: "Oylik maosh kutilmasingiz taxminan qancha?",
+  PHONE: "Ish beruvchi siz bilan bog'lanishi uchun telefon raqamingizni ayting.",
+  MATCHING: "Rahmat! Ma'lumotlaringizni tahlil qilyapman...",
+  VACANCY_SELECTION: "Siz uchun mos vakansiyalar topildi! Qaysi biri yoqdi? Birinchi, ikkinchi yoki uchinchi — deyishingiz mumkin.",
+  CONFIRMATION: "Ajoyib! Ushbu vakansiyaga arizangizni yuborishimni tasdiqlaysizmi?",
+  PHOTO: "Tabriklaymiz! Xizmatimiz sizga yoqdimi? Agar ha bo'lsa, kameraga qarab jilmaying! Suratga tushamiz!",
+  FAREWELL: "Arizangiz muvaffaqiyatli yuborildi! Ish beruvchi tez orada siz bilan bog'lanadi. Omad tilayman, xayr!"
+};
+
+const VACANCIES = [
+  { id:1, title:"Frontend Developer",     company:"Uzum Market",       region:"Toshkent shahri",     salary:"8 000 000", skills:["IT","dasturlash","programming","react"] },
+  { id:2, title:"Backend Developer",      company:"Click Up",           region:"Toshkent shahri",     salary:"10 000 000",skills:["IT","dasturlash","java","python","node"] },
+  { id:3, title:"Qurilish ustasi",        company:"Arcon Construction", region:"Samarqand viloyati",  salary:"5 500 000", skills:["qurilish","construction"] },
+  { id:4, title:"Elektr montajchi",       company:"UzElektro",          region:"Toshkent viloyati",   salary:"4 800 000", skills:["elektr","electrical","montaj"] },
+  { id:5, title:"Santexnik usta",         company:"AquaServis",         region:"Farg'ona viloyati",   salary:"4 200 000", skills:["santexnika","plumbing","quvur"] },
+  { id:6, title:"Hamshira",               company:"Shifa Klinikasi",    region:"Toshkent shahri",     salary:"3 800 000", skills:["tibbiyot","healthcare","hamshira"] },
+  { id:7, title:"O'qituvchi",             company:"Yangi avlod",        region:"Andijon viloyati",    salary:"3 500 000", skills:["ta'lim","education","maktab"] },
+  { id:8, title:"Buxgalter",              company:"Kapitol Group",      region:"Toshkent shahri",     salary:"6 000 000", skills:["moliya","buxgalteriya","finance","1C"] },
+  { id:9, title:"UX/UI Dizayner",         company:"Creative Studio",    region:"Toshkent shahri",     salary:"7 000 000", skills:["dizayn","design","figma"] },
+  { id:10,title:"SMM Menejeri",           company:"Brand Agency",       region:"Toshkent shahri",     salary:"4 500 000", skills:["marketing","smm","content"] },
+  { id:11,title:"Logist",                 company:"Express Delivery",   region:"Toshkent shahri",     salary:"4 000 000", skills:["logistika","logistics","transport"] },
+  { id:12,title:"Oshpaz",                 company:"Tokyo Fusion",       region:"Toshkent shahri",     salary:"5 000 000", skills:["oshpazlik","culinary","pazanda"] },
+];
+
+let stepIndex = 0;
+let cv = { name:'', age:null, region:'', district:'', education:'', skills:[], experience_years:null, job_type:'', preferred_region:'', expected_salary:'', phone:'', selected_vacancy:null, photo_taken:false };
+let matches = [];
+let isListening = false;
+let isSpeaking = false;
+let isProcessing = false;
+let recognition = null;
+let inactivityTimer = null;
+let camStream = null;
+let photoDataUrl = null;
+let faceAnimInterval = null;
+
+// ═══════════════════════════════════════════════════════════════════
+//  FACE ANIMATIONS
+// ═══════════════════════════════════════════════════════════════════
+
+const emotions = {
+  NEUTRAL: () => {
+    setMouth("M 72 132 Q 100 140 128 132");
+    setBrows("M 55 64 Q 72 58 88 64", "M 112 64 Q 128 58 145 64");
+    setTeeth(0); setThinking(false); setWaves(false);
+    animBlink();
+  },
+  HAPPY: () => {
+    setMouth("M 65 128 Q 100 148 135 128");
+    setBrows("M 55 60 Q 72 54 88 60", "M 112 60 Q 128 54 145 60");
+    setTeeth(0.9); setThinking(false); setWaves(false);
+    animBounce();
+  },
+  LISTENING: () => {
+    setMouth("M 78 132 Q 100 136 122 132");
+    setBrows("M 55 64 Q 72 60 88 64", "M 112 60 Q 128 64 145 60");
+    setTeeth(0); setThinking(false); setWaves(true);
+    animBob();
+  },
+  THINKING: () => {
+    setMouth("M 80 135 Q 100 132 118 138");
+    setBrows("M 58 58 Q 72 62 85 58", "M 115 58 Q 128 62 142 58");
+    setTeeth(0); setThinking(true); setWaves(false);
+    animLook();
+  },
+  CONFUSED: () => {
+    setMouth("M 72 136 Q 95 128 128 134");
+    setBrows("M 55 60 Q 72 68 88 62", "M 112 62 Q 128 56 145 64");
+    setTeeth(0); setThinking(false); setWaves(false);
+    animTilt();
+  },
+  CELEBRATING: () => {
+    setMouth("M 60 126 Q 100 152 140 126");
+    setBrows("M 52 58 Q 72 50 90 58", "M 110 58 Q 128 50 148 58");
+    setTeeth(1); setThinking(false); setWaves(false);
+    animCelebrate();
+  }
+};
+
+function setMouth(d) { document.getElementById('mouth').setAttribute('d', d); }
+function setBrows(l, r) { document.getElementById('browL').setAttribute('d', l); document.getElementById('browR').setAttribute('d', r); }
+function setTeeth(op) { document.getElementById('teeth').setAttribute('opacity', op); }
+function setThinking(on) { ['dot1','dot2','dot3'].forEach((id,i) => { document.getElementById(id).setAttribute('opacity', on ? 0.8 : 0); }); }
+function setWaves(on) { document.getElementById('wave1').setAttribute('opacity', on ? 0.9 : 0); document.getElementById('wave2').setAttribute('opacity', on ? 0.7 : 0); }
+
+function clearFaceAnim() { if (faceAnimInterval) { clearInterval(faceAnimInterval); faceAnimInterval = null; } resetPupils(); resetFace(); }
+
+function resetFace() {
+  const fc = document.getElementById('faceCircle');
+  fc.style.transform = '';
+  fc.style.transformOrigin = '100px 100px';
+}
+function resetPupils() {
+  document.getElementById('eyeLpupil').setAttribute('cx', 72);
+  document.getElementById('eyeRpupil').setAttribute('cx', 128);
+  document.getElementById('eyeLpupil').setAttribute('cy', 92);
+  document.getElementById('eyeRpupil').setAttribute('cy', 92);
+}
+
+function animBlink() {
+  clearFaceAnim();
+  let t = 0;
+  faceAnimInterval = setInterval(() => {
+    t++;
+    if (t % 40 === 0) {
+      const eL = document.getElementById('eyeLwhite');
+      const eR = document.getElementById('eyeRwhite');
+      eL.setAttribute('ry', 2); eR.setAttribute('ry', 2);
+      setTimeout(() => { eL.setAttribute('ry', 24); eR.setAttribute('ry', 24); }, 120);
+    }
+  }, 100);
+}
+
+function animBounce() {
+  clearFaceAnim();
+  let t = 0;
+  faceAnimInterval = setInterval(() => {
+    t += 0.05;
+    const y = Math.sin(t) * 4;
+    document.getElementById('face-svg').style.transform = `translateY(${y}px)`;
+    const eL = document.getElementById('eyeLwhite');
+    const eR = document.getElementById('eyeRwhite');
+    const ry = 20 + Math.sin(t * 2) * 4;
+    eL.setAttribute('ry', ry); eR.setAttribute('ry', ry);
+  }, 30);
+}
+
+function animBob() {
+  clearFaceAnim();
+  let t = 0;
+  faceAnimInterval = setInterval(() => {
+    t += 0.04;
+    const rot = Math.sin(t) * 5;
+    document.getElementById('face-svg').style.transform = `rotate(${rot}deg)`;
+    // wave pulse
+    const op1 = 0.5 + Math.sin(t * 3) * 0.4;
+    const op2 = 0.5 + Math.sin(t * 3 + 1) * 0.3;
+    document.getElementById('wave1').setAttribute('opacity', Math.max(0,op1));
+    document.getElementById('wave2').setAttribute('opacity', Math.max(0,op2));
+  }, 30);
+}
+
+function animLook() {
+  clearFaceAnim();
+  let phase = 0;
+  faceAnimInterval = setInterval(() => {
+    phase++;
+    if (phase === 1) {
+      document.getElementById('eyeLpupil').setAttribute('cx', 78);
+      document.getElementById('eyeRpupil').setAttribute('cx', 134);
+      document.getElementById('eyeLpupil').setAttribute('cy', 86);
+      document.getElementById('eyeRpupil').setAttribute('cy', 86);
+    } else if (phase === 30) {
+      resetPupils();
+    } else if (phase === 60) {
+      // thinking dot blink
+      ['dot1','dot2','dot3'].forEach((id,i) => {
+        setTimeout(() => {
+          document.getElementById(id).setAttribute('opacity', 1);
+          setTimeout(() => document.getElementById(id).setAttribute('opacity', 0.3), 200);
+        }, i * 150);
+      });
+    } else if (phase > 80) { phase = 0; }
+  }, 60);
+}
+
+function animTilt() {
+  clearFaceAnim();
+  let t = 0;
+  faceAnimInterval = setInterval(() => {
+    t += 0.04;
+    const rot = Math.sin(t * 0.7) * 8;
+    document.getElementById('face-svg').style.transform = `rotate(${rot}deg)`;
+  }, 30);
+}
+
+function animCelebrate() {
+  clearFaceAnim();
+  let t = 0;
+  faceAnimInterval = setInterval(() => {
+    t += 0.08;
+    const y = Math.abs(Math.sin(t)) * -10;
+    const rot = Math.sin(t * 2) * 8;
+    document.getElementById('face-svg').style.transform = `translateY(${y}px) rotate(${rot}deg)`;
+    // eyes pulse
+    const ry = 22 + Math.sin(t * 3) * 4;
+    document.getElementById('eyeLwhite').setAttribute('ry', ry);
+    document.getElementById('eyeRwhite').setAttribute('ry', ry);
+  }, 30);
+}
+
+function setEmotion(name) {
+  document.getElementById('face-svg').style.transform = '';
+  document.getElementById('eyeLwhite').setAttribute('ry', 24);
+  document.getElementById('eyeRwhite').setAttribute('ry', 24);
+  if (emotions[name]) emotions[name]();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════════════════════
+
+function setStatus(state, text) {
+  const pill = document.getElementById('statusPill');
+  pill.className = `status-pill ${state}`;
+  document.getElementById('statusText').textContent = text;
+  const card = document.getElementById('faceCard');
+  card.className = `face-card ${state === 'idle' ? '' : state}`;
+}
+
+function setSubtitle(text, muted = false) {
+  const el = document.getElementById('subtitle');
+  el.textContent = text;
+  el.className = `subtitle${muted ? ' muted' : ''}`;
+}
+
+function updateProgress() {
+  const pct = ((stepIndex + 1) / STEPS.length) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = STEP_LABELS[STEPS[stepIndex]] || '';
+}
+
+function showWaveform(on) {
+  document.getElementById('waveform').classList.toggle('hidden', !on);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TTS — Web Speech API (browser built-in, free, no API)
+// ═══════════════════════════════════════════════════════════════════
+
+function speak(text) {
+  return new Promise((resolve) => {
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'uz-UZ';
+    utt.rate = 0.95;
+    utt.pitch = 1.05;
+    // Try to find a good voice
+    const voices = window.speechSynthesis.getVoices();
+    const uz = voices.find(v => v.lang.startsWith('uz'));
+    const ru = voices.find(v => v.lang.startsWith('ru'));
+    const en = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'));
+    utt.voice = uz || ru || en || voices[0] || null;
+    utt.onend = resolve;
+    utt.onerror = resolve;
+    window.speechSynthesis.speak(utt);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  STT — Web Speech API (browser built-in)
+// ═══════════════════════════════════════════════════════════════════
+
+function startRecognition(onResult, onEnd) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert("Bu brauzer ovoz tanishni qo'llab-quvvatlamaydi. Chrome ishlating."); return; }
+  recognition = new SR();
+  recognition.lang = 'uz-UZ';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let r of e.results) {
+      if (r.isFinal) final += r[0].transcript;
+      else interim += r[0].transcript;
+    }
+    setSubtitle(`"${final || interim}"`);
+    if (final) onResult(final);
+  };
+  recognition.onend = onEnd;
+  recognition.onerror = (e) => { console.warn('STT error:', e.error); onEnd(); };
+  recognition.start();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CLAUDE API — NLU: extract structured data from voice text
+// ═══════════════════════════════════════════════════════════════════
+
+async function callClaude(userText) {
+  if (!ANTHROPIC_KEY) {
+    showToast('⚠️ API key kiriting!');
+    return null;
+  }
+
+  const step = STEPS[stepIndex];
+  const vacContext = matches.length > 0
+    ? `\nVacancies shown:\n${matches.map((v,i) => `${i+1}. ${v.title} - ${v.company} (${v.region}) ${v.salary} so'm`).join('\n')}`
+    : '';
+
+  const prompt = `You are "Ish Bor" — an AI job assistant for Uzbekistan's Ministry of Employment.
+Current step: ${step}
+Current CV data: ${JSON.stringify(cv)}
+${vacContext}
+
+User said: "${userText}"
+
+Extract information for step "${step}" and return JSON only. No explanations.
+
+Rules:
+- If user says back/orqaga/назад → nextAction: "BACK"
+- If user says stop/to'xtat/стоп → nextAction: "STOP"
+- Otherwise → nextAction: "CONTINUE"
+
+Return ONLY valid JSON:
+{
+  "updatedCV": {
+    "name": "",
+    "age": null,
+    "region": "",
+    "district": "",
+    "education": "",
+    "skills": [],
+    "experience_years": null,
+    "job_type": "",
+    "preferred_region": "",
+    "expected_salary": "",
+    "phone": ""
+  },
+  "selected_vacancy_index": null,
+  "nextAction": "CONTINUE",
+  "confirmationText": "short warm confirmation in uzbek"
+}
+
+Step-specific extraction:
+- GREETING: any yes/okay/ha → CONTINUE
+- NAME: extract full name → name field
+- AGE: extract number → age field
+- REGION: match to Uzbekistan region → region field
+- DISTRICT: extract district name → district field
+- EDUCATION: extract level → education field
+- SKILLS: extract array of skills → skills field
+- EXPERIENCE: extract number of years → experience_years field
+- JOB_TYPE: extract job type → job_type field
+- WORK_REGION: extract region → preferred_region field
+- SALARY: extract salary as string → expected_salary field
+- PHONE: extract phone number → phone field
+- VACANCY_SELECTION: if user says "birinchi/first/1" → index 0, "ikkinchi/second/2" → index 1, "uchinchi/third/3" → index 2 → selected_vacancy_index
+- CONFIRMATION: yes/ha/да → CONTINUE, no → BACK`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) { console.error('Claude error:', data); return null; }
+
+    const text = data.content[0].text.trim();
+    // Extract JSON even if there's surrounding text
+    const match = text.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : null;
+  } catch(e) {
+    console.error('Claude API error:', e);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  VACANCY MATCHING
+// ═══════════════════════════════════════════════════════════════════
+
+function matchVacancies() {
+  const scored = VACANCIES.map(v => {
+    let score = 0;
+    cv.skills.forEach(skill => {
+      const s = skill.toLowerCase();
+      if (v.skills.some(vs => vs.toLowerCase().includes(s) || s.includes(vs.toLowerCase()))) score += 3;
+    });
+    if (cv.preferred_region && v.region.toLowerCase().includes(cv.preferred_region.toLowerCase())) score += 2;
+    const salNum = parseInt((cv.expected_salary || '').replace(/\D/g,'')) || 0;
+    const vacNum = parseInt(v.salary.replace(/\D/g,'')) || 0;
+    if (salNum > 0 && vacNum >= salNum * 0.8) score += 1;
+    return { ...v, score };
+  });
+  return scored.sort((a,b) => b.score - a.score).slice(0, 3);
+}
+
+function renderVacancies() {
+  const list = document.getElementById('vacancyList');
+  list.innerHTML = '';
+  matches.forEach((v, i) => {
+    const card = document.createElement('div');
+    card.className = `vac-card${cv.selected_vacancy?.id === v.id ? ' selected' : ''}`;
+    card.innerHTML = `
+      <div class="vac-num">${i+1}</div>
+      <div class="vac-info">
+        <div class="vac-title">${v.title}</div>
+        <div class="vac-company">${v.company} · ${v.region}</div>
+      </div>
+      <div class="vac-salary">${v.salary}<br><span style="font-size:10px;color:#bbb">so'm/oy</span></div>
+    `;
+    card.onclick = () => {
+      cv.selected_vacancy = v;
+      renderVacancies();
+    };
+    list.appendChild(card);
+  });
+  list.classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MAIN FLOW
+// ═══════════════════════════════════════════════════════════════════
+
+async function startApp() {
+  if (!ANTHROPIC_KEY) {
+    showToast('⚠️ Avval API key kiriting!');
+    return;
+  }
+
+  // Show permission screen first
+  showPermissionScreen();
+}
+
+function showPermissionScreen() {
+  const screen = document.getElementById('start-screen');
+  screen.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center;max-width:360px;">
+      <div style="font-size:72px;line-height:1;animation:bounce 2s ease-in-out infinite;">🎙️</div>
+      <div>
+        <div style="font-size:22px;font-weight:900;margin-bottom:8px;">Mikrofon ruxsati</div>
+        <div style="font-size:14px;color:#888;line-height:1.6;">
+          Dastur ishlashi uchun mikrofon ruxsatini berish kerak.<br>
+          Quyidagi tugmani bosganingizda brauzer so'raydi —
+          <strong style="color:#F5A623;">"Ruxsat berish"</strong> ni tanlang.
+        </div>
+      </div>
+
+      <div style="background:#FFF8E1;border:2px dashed #FFD93D;border-radius:16px;padding:16px 20px;width:100%;font-size:13px;color:#555;line-height:1.7;">
+        <div style="font-weight:800;color:#F5A623;margin-bottom:6px;">📋 Qadamlar:</div>
+        <div>1. "Ruxsat berish" tugmasini bosing</div>
+        <div>2. Brauzer so'roviga <b>"Allow / Ruxsat"</b> deng</div>
+        <div>3. Suhbat boshlanadi!</div>
+      </div>
+
+      <div style="background:#FFF0F3;border-radius:14px;padding:12px 18px;font-size:12px;color:#888;width:100%;">
+        ⚠️ Agar so'rov chiqmasa — brauzer manzil satrida
+        🔒 belgisini bosib, mikrofonga ruxsat bering
+      </div>
+
+      <button class="btn-big" onclick="requestPermissionAndStart()" style="width:100%;">
+        🎙️ Ruxsat berish va boshlash
+      </button>
+    </div>
+  `;
+}
+
+function requestPermissionAndStart() {
+  var btn = document.querySelector('#start-screen .btn-big');
+  if (btn) { btn.innerHTML = '⏳ Kutilmoqda...'; btn.disabled = true; }
+
+  // iOS Safari requires getUserMedia to be called SYNCHRONOUSLY inside a touch/click handler.
+  // No async/await, no setTimeout before this line — otherwise iOS silently blocks the popup.
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(function(stream) {
+      // Release immediately — we'll re-request when actually recording
+      stream.getTracks().forEach(function(t) { t.stop(); });
+
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        showPermissionError(
+          'Bu brauzer ovoz tanishni qo\'llab-quvvatlamaydi.<br>' +
+          '<b>Safari</b> (iOS 14.5+) yoki <b>Chrome</b> ishlating.'
+        );
+        return;
+      }
+
+      // All good — launch app
+      document.getElementById('start-screen').classList.add('hidden');
+      var mainApp = document.getElementById('main-app');
+      mainApp.classList.remove('hidden');
+      mainApp.style.display = 'flex';
+      document.getElementById('navBtns').style.display = 'flex';
+      runStep(0);
+    })
+    .catch(function(e) {
+      console.error('Permission error:', e.name, e.message);
+      var msg;
+      if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+        msg =
+          'Mikrofon ruxsati rad etildi.<br><br>' +
+          '📱 <b>iPhone/iPad:</b><br>' +
+          'Sozlamalar → Safari → Mikrofon → Ruxsat<br><br>' +
+          '🤖 <b>Android:</b><br>' +
+          'Brauzer → Sozlamalar → Sayt ruxsatlari → Mikrofon';
+      } else if (e.name === 'NotFoundError') {
+        msg = 'Mikrofon qurilmasi topilmadi.<br>Qurilmangizda mikrofon borligini tekshiring.';
+      } else if (e.name === 'SecurityError') {
+        msg =
+          'Xavfsizlik xatosi. Sahifa <b>https://</b> yoki <b>localhost</b> orqali<br>' +
+          'ochilishi kerak. <b>file://</b> orqali ishlamaydi.';
+      } else {
+        msg = 'Xatolik yuz berdi: <b>' + e.name + '</b><br>Sahifani yangilab qayta urining.';
+      }
+      showPermissionError(msg);
+    });
+}
+
+function showPermissionError(msg) {
+  document.getElementById('start-screen').innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center;max-width:360px;">' +
+      '<div style="font-size:72px;">😕</div>' +
+      '<div style="font-size:20px;font-weight:900;color:#FF6B6B;">Ruxsat berilmadi</div>' +
+      '<div style="background:#FFF0F0;border:2px solid #FFB3B3;border-radius:16px;padding:16px 20px;font-size:14px;color:#555;line-height:1.8;">' + msg + '</div>' +
+      '<button class="btn-big" onclick="location.reload()" style="width:100%;background:#4D96FF;color:white;">🔄 Sahifani yangilash</button>' +
+      '<button onclick="showPermissionScreen();requestPermissionAndStart();" style="background:none;border:none;color:#F5A623;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;">↩ Qayta urinish</button>' +
+    '</div>';
+}
+
+async function runStep(idx) {
+  stepIndex = idx;
+  updateProgress();
+
+  const step = STEPS[idx];
+  const q = QUESTIONS[step]
+    .replace('[Name]', cv.name || "Do'stim")
+    .replace('[Job title]', cv.selected_vacancy?.title || 'ish')
+    .replace('[Company]', cv.selected_vacancy?.company || 'kompaniya');
+
+  // PHOTO step
+  if (step === 'PHOTO') {
+    setEmotion('HAPPY');
+    setStatus('speaking', 'Gapiryapman...');
+    setSubtitle(q);
+    await speak(q);
+    await startCamera();
+    await runCountdown();
+    return;
+  }
+
+  // FAREWELL step
+  if (step === 'FAREWELL') {
+    setEmotion('CELEBRATING');
+    setStatus('speaking', 'Yakunlash...');
+    setSubtitle(q);
+    document.getElementById('micArea').style.display = 'none';
+    launchConfetti();
+    renderCVSummary();
+    await speak(q);
+    return;
+  }
+
+  // MATCHING step
+  if (step === 'MATCHING') {
+    setEmotion('THINKING');
+    setStatus('thinking', 'Qidiryapman...');
+    setSubtitle('Sizga mos vakansiyalar qidirilmoqda...');
+    await speak(QUESTIONS.MATCHING);
+    matches = matchVacancies();
+    renderVacancies();
+    await runStep(STEPS.indexOf('VACANCY_SELECTION'));
+    return;
+  }
+
+  // Normal steps: speak question then listen
+  setEmotion('HAPPY');
+  setStatus('speaking', 'Gapiryapman...');
+  setSubtitle(q);
+  showWaveform(false);
+  await speak(q);
+  await listenAndProcess();
+}
+
+async function listenAndProcess() {
+  return new Promise(async (resolve) => {
+    setEmotion('LISTENING');
+    setStatus('listening', 'Tinglayapman...');
+    setSubtitle('Gapiring...');
+    showWaveform(true);
+    document.getElementById('micBtn').className = 'mic-btn recording';
+    document.getElementById('micBtn').textContent = '⏹';
+    document.getElementById('micHint').textContent = 'Tugmani bosib to\'xtating';
+    isListening = true;
+
+    let finalText = '';
+    let recognized = false;
+
+    startInactivityTimer();
+
+    startRecognition(
+      (text) => { finalText = text; recognized = true; },
+      async () => {
+        clearInactivityTimer();
+        isListening = false;
+        document.getElementById('micBtn').className = 'mic-btn idle';
+        document.getElementById('micBtn').textContent = '🎙️';
+        document.getElementById('micHint').textContent = 'Bosib gapiring';
+        showWaveform(false);
+
+        if (!finalText.trim()) {
+          setEmotion('CONFUSED');
+          setStatus('idle', 'Eshitmadim');
+          await speak("Kechirasiz, eshitmadim. Yana bir marta ayta olasizmi?");
+          resolve();
+          await listenAndProcess();
+          return;
+        }
+
+        await processUserInput(finalText);
+        resolve();
+      }
+    );
+  });
+}
+
+function toggleMic() {
+  if (isListening && recognition) {
+    recognition.stop();
+  } else if (!isSpeaking && !isProcessing) {
+    listenAndProcess();
+  }
+}
+
+async function processUserInput(text) {
+  setEmotion('THINKING');
+  setStatus('thinking', 'O\'ylayapman...');
+  setSubtitle('Tahlil qilyapman...');
+  isProcessing = true;
+
+  const result = await callClaude(text);
+
+  isProcessing = false;
+
+  if (!result) {
+    setEmotion('CONFUSED');
+    await speak("Xatolik yuz berdi. Qaytadan urinib ko'ramiz.");
+    await listenAndProcess();
+    return;
+  }
+
+  if (result.nextAction === 'BACK') { goBack(); return; }
+  if (result.nextAction === 'STOP') {
+    setEmotion('CONFUSED');
+    await speak("Davom etamizmi?");
+    await listenAndProcess();
+    return;
+  }
+
+  // Merge CV (don't overwrite non-empty fields with empty)
+  const u = result.updatedCV || {};
+  for (const [k, v] of Object.entries(u)) {
+    if (v === null || v === undefined) continue;
+    if (typeof v === 'string' && !v.trim()) continue;
+    if (Array.isArray(v) && v.length === 0) continue;
+    cv[k] = v;
+  }
+
+  // Vacancy selection
+  if (result.selected_vacancy_index != null && matches[result.selected_vacancy_index]) {
+    cv.selected_vacancy = matches[result.selected_vacancy_index];
+    renderVacancies();
+  }
+
+  // Speak confirmation
+  if (result.confirmationText) {
+    setEmotion('HAPPY');
+    setStatus('speaking', 'Tasdiq...');
+    setSubtitle(result.confirmationText);
+    await speak(result.confirmationText);
+  }
+
+  // Move to next step
+  const next = stepIndex + 1;
+  if (next < STEPS.length) {
+    await runStep(next);
+  }
+}
+
+function goBack() {
+  if (stepIndex > 0) runStep(stepIndex - 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INACTIVITY TIMER
+// ═══════════════════════════════════════════════════════════════════
+
+function startInactivityTimer() {
+  clearInactivityTimer();
+  inactivityTimer = setTimeout(async () => {
+    if (isListening) {
+      setEmotion('CONFUSED');
+      if (recognition) recognition.stop();
+      await speak("Siz hali o'ylamoqdasizmi? Shoshilmang, qayta bosing.");
+    }
+  }, 15000);
+}
+
+function clearInactivityTimer() {
+  if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = null; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CAMERA & PHOTO
+// ═══════════════════════════════════════════════════════════════════
+
+async function startCamera() {
+  const wrap = document.getElementById('cameraWrap');
+  wrap.classList.remove('hidden');
+  document.getElementById('micArea').style.display = 'none';
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' } });
+    document.getElementById('camera-video').srcObject = camStream;
+  } catch(e) {
+    wrap.classList.add('hidden');
+  }
+}
+
+function runCountdown() {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('countdownOverlay');
+    const numEl = document.getElementById('countdownNum');
+    overlay.classList.remove('hidden');
+    let n = 3;
+    numEl.textContent = n;
+    const iv = setInterval(() => {
+      n--;
+      if (n > 0) {
+        numEl.textContent = n;
+        numEl.style.animation = 'none';
+        setTimeout(() => numEl.style.animation = 'countIn 0.5s cubic-bezier(0.34,1.56,0.64,1)', 10);
+      } else {
+        clearInterval(iv);
+        capturePhoto();
+        resolve();
+      }
+    }, 1000);
+  });
+}
+
+async function capturePhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  photoDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  cv.photo_taken = true;
+
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+
+  document.getElementById('cameraWrap').classList.add('hidden');
+  document.getElementById('countdownOverlay').classList.add('hidden');
+  const photoEl = document.getElementById('captured-photo');
+  photoEl.src = photoDataUrl;
+  photoEl.style.display = 'block';
+
+  setEmotion('CELEBRATING');
+  launchConfetti();
+  await speak("Rahmat! Siz juda chiroyli jilmaydingiz!");
+  await runStep(STEPS.indexOf('FAREWELL'));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CV SUMMARY RENDER
+// ═══════════════════════════════════════════════════════════════════
+
+function renderCVSummary() {
+  const v = cv.selected_vacancy;
+  const id = Math.random().toString(36).substr(2,8).toUpperCase();
+  const el = document.getElementById('cvSummary');
+  el.innerHTML = `
+    <div class="cv-header">
+      ${photoDataUrl
+        ? `<img class="cv-photo" src="${photoDataUrl}" alt="photo">`
+        : `<div class="cv-photo-placeholder">😊</div>`}
+      <div>
+        <div class="cv-name">${cv.name || '—'}</div>
+        <div class="cv-job">${cv.job_type || ''} ${cv.age ? '· '+cv.age+' yosh' : ''}</div>
+      </div>
+    </div>
+    <div class="cv-grid">
+      <div class="cv-field"><div class="label">📍 Hudud</div><div class="value">${cv.district ? cv.district+', ' : ''}${cv.region||'—'}</div></div>
+      <div class="cv-field"><div class="label">🎓 Ta'lim</div><div class="value">${cv.education||'—'}</div></div>
+      <div class="cv-field"><div class="label">💼 Tajriba</div><div class="value">${cv.experience_years ? cv.experience_years+' yil' : '—'}</div></div>
+      <div class="cv-field"><div class="label">💰 Maosh</div><div class="value">${cv.expected_salary||'—'}</div></div>
+      <div class="cv-field"><div class="label">🛠 Ko'nikmalar</div><div class="value">${cv.skills.join(', ')||'—'}</div></div>
+      <div class="cv-field"><div class="label">📞 Telefon</div><div class="value">${cv.phone||'—'}</div></div>
+    </div>
+    ${v ? `
+    <div class="cv-vacancy">
+      <div class="label">✅ TANLANGAN VAKANSIYA</div>
+      <div class="val">${v.title}</div>
+      <div class="sub">${v.company} · ${v.region} · ${v.salary} so'm/oy</div>
+    </div>` : ''}
+    <div class="cv-status">
+      <div class="sent-badge">✓ ARIZA YUBORILDI</div>
+      <div class="cv-id">ID: ${id}</div>
+    </div>
+  `;
+  el.classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CONFETTI
+// ═══════════════════════════════════════════════════════════════════
+
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const pieces = Array.from({length:120}, () => ({
+    x: Math.random() * canvas.width,
+    y: -20,
+    w: 8 + Math.random() * 8,
+    h: 6 + Math.random() * 6,
+    color: ['#FFD93D','#6BCB77','#4D96FF','#FF6B9D','#FF9F1C'][Math.floor(Math.random()*5)],
+    speed: 2 + Math.random() * 4,
+    angle: Math.random() * Math.PI * 2,
+    spin: (Math.random() - 0.5) * 0.2,
+    drift: (Math.random() - 0.5) * 2
+  }));
+
+  let frame;
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let active = 0;
+    pieces.forEach(p => {
+      if (p.y > canvas.height + 20) return;
+      active++;
+      p.y += p.speed;
+      p.x += p.drift;
+      p.angle += p.spin;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+    if (active > 0) frame = requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RESET
+// ═══════════════════════════════════════════════════════════════════
+
+function resetApp() {
+  window.speechSynthesis.cancel();
+  if (recognition) recognition.abort();
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+  clearInactivityTimer();
+  clearFaceAnim();
+
+  stepIndex = 0;
+  cv = { name:'', age:null, region:'', district:'', education:'', skills:[], experience_years:null, job_type:'', preferred_region:'', expected_salary:'', phone:'', selected_vacancy:null, photo_taken:false };
+  matches = [];
+  photoDataUrl = null;
+  isListening = false; isSpeaking = false; isProcessing = false;
+
+  document.getElementById('vacancyList').innerHTML = '';
+  document.getElementById('vacancyList').classList.add('hidden');
+  document.getElementById('cvSummary').classList.add('hidden');
+  document.getElementById('cameraWrap').classList.add('hidden');
+  document.getElementById('captured-photo').style.display = 'none';
+  document.getElementById('micArea').style.display = 'flex';
+  document.getElementById('micBtn').className = 'mic-btn idle';
+  document.getElementById('micBtn').textContent = '🎙️';
+  showWaveform(false);
+  setEmotion('NEUTRAL');
+  setStatus('idle', 'Tayyor');
+
+  document.getElementById('start-screen').classList.remove('hidden');
+  document.getElementById('main-app').classList.add('hidden');
+}
+
+// Init face
+setEmotion('NEUTRAL');
+
+// Preload voices
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+window.speechSynthesis.getVoices();
+</script>
+
+</body>
+</html>
