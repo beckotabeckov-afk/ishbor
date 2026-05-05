@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bandlik Vazirligi — AI Maslahatchi</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap');
+
+:root {
+–navy:    #0D1B3E;
+–navy2:   #162040;
+–blue:    #1A4BAA;
+–blue2:   #1E5AC8;
+–accent:  #2E7DF7;
+–gold:    #C9A84C;
+–gold2:   #E8C56B;
+–success: #1E8A4C;
+–danger:  #C0392B;
+–bg:      #F4F6FA;
+–card:    #FFFFFF;
+–border:  #DDE3EF;
+–text:    #1A1F36;
+–muted:   #6B7280;
+–light:   #EEF2FF;
+}
+
+- { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+font-family: ‘Inter’, system-ui, sans-serif;
+background: var(–bg);
+color: var(–text);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+width: 100%;
+background: var(–navy);
+border-bottom: 3px solid var(–gold);
+padding: 10px 20px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 12px;
+position: sticky;
+top: 0;
+z-index: 100;
+}
+.topbar-left { display:flex; align-items:center; gap:12px; }
+.uz-flag { display:flex; flex-direction:column; width:28px; height:20px; border-radius:3px; overflow:hidden; flex-shrink:0; }
+.uz-flag div { flex:1; }
+.topbar-title { color:white; font-size:13px; font-weight:700; letter-spacing:0.3px; line-height:1.2; }
+.topbar-sub { color:rgba(255,255,255,0.45); font-size:10px; font-weight:400; letter-spacing:0.5px; }
+.api-row { display:flex; gap:8px; align-items:center; }
+.api-input {
+padding: 7px 12px;
+border: 1.5px solid rgba(255,255,255,0.15);
+border-radius: 8px;
+background: rgba(255,255,255,0.07);
+color: white;
+font-family: ‘Roboto Mono’, monospace;
+font-size: 11px;
+width: 170px;
+outline: none;
+}
+.api-input::placeholder { color: rgba(255,255,255,0.3); }
+.api-input:focus { border-color: var(–gold); }
+.api-save {
+padding: 7px 14px;
+background: var(–gold);
+border: none;
+border-radius: 8px;
+color: var(–navy);
+font-family: ‘Inter’, sans-serif;
+font-weight: 700;
+font-size: 12px;
+cursor: pointer;
+white-space: nowrap;
+}
+.api-save:hover { background: var(–gold2); }
+
+/* ── MAIN WRAP ── */
+.app { width:100%; max-width:600px; padding:20px 16px 40px; display:flex; flex-direction:column; gap:16px; }
+
+/* ── PROGRESS ── */
+.progress-section { display:flex; flex-direction:column; gap:8px; }
+.progress-header { display:flex; justify-content:space-between; align-items:center; }
+.progress-step { font-size:11px; font-weight:600; color:var(–blue); text-transform:uppercase; letter-spacing:1px; }
+.progress-count { font-size:11px; color:var(–muted); font-variant-numeric:tabular-nums; }
+.progress-bg { height:6px; background:var(–border); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg, var(–blue), var(–accent)); border-radius:3px; transition:width 0.6s cubic-bezier(0.4,0,0.2,1); }
+
+/* ── CHARACTER CARD ── */
+.char-card {
+background: var(–card);
+border: 1.5px solid var(–border);
+border-radius: 16px;
+padding: 24px 20px 20px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 16px;
+box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+transition: border-color 0.3s, box-shadow 0.3s;
+}
+.char-card.speaking { border-color: var(–accent); box-shadow: 0 0 0 3px rgba(46,125,247,0.12); }
+.char-card.listening { border-color: var(–success); box-shadow: 0 0 0 3px rgba(30,138,76,0.12); }
+.char-card.thinking { border-color: var(–gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.12); }
+
+/* ── SVG CHARACTER ── */
+#agent-svg { width: 160px; height: 200px; }
+
+/* ── STATUS ── */
+.status-row { display:flex; align-items:center; gap:8px; }
+.status-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.status-dot.idle     { background:#CBD5E1; }
+.status-dot.speaking { background:var(–accent); animation:pulse-dot 1s infinite; }
+.status-dot.listening{ background:var(–success); animation:pulse-dot 0.8s infinite; }
+.status-dot.thinking { background:var(–gold); animation:pulse-dot 1.2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.status-label { font-size:12px; font-weight:600; color:var(–muted); text-transform:uppercase; letter-spacing:0.8px; }
+
+/* ── SPEECH BUBBLE ── */
+.speech-bubble {
+width: 100%;
+background: var(–light);
+border: 1.5px solid var(–border);
+border-radius: 12px;
+padding: 14px 16px;
+font-size: 14px;
+line-height: 1.65;
+color: var(–text);
+font-weight: 500;
+min-height: 52px;
+transition: opacity 0.2s;
+}
+.speech-bubble.dim { opacity: 0.5; }
+
+/* ── WAVEFORM ── */
+.waveform { display:flex; align-items:center; gap:3px; height:28px; }
+.wv { width:3px; border-radius:3px; background:var(–success); animation:wv 1s ease-in-out infinite; }
+.wv:nth-child(1){animation-delay:0s}   .wv:nth-child(2){animation-delay:.08s}
+.wv:nth-child(3){animation-delay:.16s} .wv:nth-child(4){animation-delay:.24s}
+.wv:nth-child(5){animation-delay:.32s} .wv:nth-child(6){animation-delay:.16s}
+.wv:nth-child(7){animation-delay:.08s} .wv:nth-child(8){animation-delay:0s}
+@keyframes wv { 0%,100%{height:4px;opacity:.4} 50%{height:24px;opacity:1} }
+
+/* ── MIC BUTTON ── */
+.mic-area { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.mic-btn {
+width:68px; height:68px; border-radius:50%; border:none; cursor:pointer;
+display:flex; align-items:center; justify-content:center;
+font-size:26px; transition:all 0.2s; font-family:inherit;
+}
+.mic-btn:disabled { opacity:0.35; cursor:not-allowed; }
+.mic-btn.idle { background:var(–blue); color:white; box-shadow:0 4px 16px rgba(26,75,170,0.35); }
+.mic-btn.idle:not(:disabled):hover { background:var(–blue2); transform:scale(1.06); }
+.mic-btn.recording { background:var(–success); color:white; animation:mic-ring 1.5s infinite; }
+@keyframes mic-ring {
+0%,100% { box-shadow: 0 0 0 0 rgba(30,138,76,0.4); }
+50%      { box-shadow: 0 0 0 14px rgba(30,138,76,0); }
+}
+.mic-hint { font-size:11px; color:var(–muted); font-weight:500; letter-spacing:0.3px; }
+
+/* ── VACANCY CARDS ── */
+.vacancy-section { display:flex; flex-direction:column; gap:10px; }
+.vacancy-header { font-size:12px; font-weight:700; color:var(–blue); text-transform:uppercase; letter-spacing:1px; padding-bottom:4px; border-bottom:2px solid var(–border); }
+.vac-card {
+background:white; border:1.5px solid var(–border); border-radius:12px;
+padding:14px 16px; cursor:pointer; transition:all 0.2s;
+display:flex; gap:14px; align-items:flex-start;
+}
+.vac-card:hover { border-color:var(–accent); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.vac-card.selected { border-color:var(–blue); background:var(–light); }
+.vac-num { width:32px; height:32px; border-radius:8px; background:var(–navy); color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0; margin-top:2px; }
+.vac-card.selected .vac-num { background:var(–blue); }
+.vac-info { flex:1; }
+.vac-title { font-size:14px; font-weight:700; color:var(–text); margin-bottom:3px; }
+.vac-company { font-size:12px; color:var(–muted); margin-bottom:6px; }
+.vac-tags { display:flex; gap:6px; flex-wrap:wrap; }
+.vtag { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; background:var(–light); color:var(–blue); border:1px solid var(–border); }
+.vac-salary { font-size:13px; font-weight:800; color:var(–navy); white-space:nowrap; text-align:right; }
+.vac-salary span { display:block; font-size:10px; font-weight:400; color:var(–muted); }
+
+/* ── CV SUMMARY ── */
+.cv-card {
+background:white; border:1.5px solid var(–border); border-radius:16px;
+overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+.cv-header-bar {
+background:linear-gradient(135deg, var(–navy) 0%, var(–blue) 100%);
+padding:20px;
+display:flex; gap:16px; align-items:center;
+}
+.cv-photo-wrap { width:64px; height:64px; border-radius:12px; overflow:hidden; border:3px solid var(–gold); flex-shrink:0; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; }
+.cv-photo-wrap img { width:100%; height:100%; object-fit:cover; }
+.cv-name-block .name { font-size:18px; font-weight:800; color:white; }
+.cv-name-block .role { font-size:12px; color:rgba(255,255,255,0.6); margin-top:3px; }
+.cv-body { padding:18px 20px; display:flex; flex-direction:column; gap:14px; }
+.cv-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.cv-field .lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(–muted); margin-bottom:3px; }
+.cv-field .val { font-size:13px; font-weight:600; color:var(–text); }
+.cv-vac-box { background:var(–light); border:1.5px solid var(–blue); border-radius:10px; padding:12px 14px; }
+.cv-vac-box .lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(–blue); margin-bottom:4px; }
+.cv-vac-box .val { font-size:14px; font-weight:800; color:var(–navy); }
+.cv-vac-box .sub { font-size:12px; color:var(–muted); margin-top:2px; }
+.cv-footer { display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-top:1.5px solid var(–border); background:#FAFBFD; }
+.sent-badge { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(–success); }
+.sent-badge svg { width:16px; height:16px; }
+.cv-id { font-size:10px; color:#CBD5E1; font-family:‘Roboto Mono’,monospace; }
+
+/* ── CAMERA ── */
+.camera-wrap { width:100%; aspect-ratio:4/3; border-radius:14px; overflow:hidden; background:#111; position:relative; border:2px solid var(–border); }
+#camera-video { width:100%; height:100%; object-fit:cover; display:block; }
+.countdown-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; }
+.countdown-num { font-size:96px; font-weight:800; color:white; font-family:‘Inter’,sans-serif; animation:cnt 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes cnt { from{transform:scale(1.8);opacity:0} to{transform:scale(1);opacity:1} }
+#captured-photo { width:100%; border-radius:14px; border:3px solid var(–gold); display:none; }
+
+/* ── BUTTONS ── */
+.btn-row { display:flex; gap:10px; }
+.btn { flex:1; padding:13px; border-radius:10px; border:none; font-family:‘Inter’,sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; letter-spacing:0.2px; }
+.btn:hover { transform:translateY(-1px); }
+.btn-primary { background:var(–blue); color:white; }
+.btn-primary:hover { background:var(–blue2); }
+.btn-ghost { background:var(–bg); color:var(–muted); border:1.5px solid var(–border); }
+.btn-ghost:hover { background:var(–border); color:var(–text); }
+.btn-main { width:100%; padding:15px; border-radius:12px; background:var(–blue); color:white; border:none; font-family:‘Inter’,sans-serif; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:all 0.2s; }
+.btn-main:hover { background:var(–blue2); box-shadow:0 6px 20px rgba(26,75,170,0.3); }
+.btn-reload { width:100%; padding:13px; border-radius:10px; background:var(–accent); color:white; border:none; font-family:‘Inter’,sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
+
+/* ── START SCREEN ── */
+#start-screen { display:flex; flex-direction:column; align-items:center; gap:24px; padding:20px 0; text-align:center; }
+.start-emblem { width:80px; height:80px; background:linear-gradient(135deg,var(–navy),var(–blue)); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:38px; box-shadow:0 8px 24px rgba(13,27,62,0.3); }
+.start-title { font-size:28px; font-weight:800; color:var(–navy); letter-spacing:-0.5px; }
+.start-title span { color:var(–blue); }
+.start-sub { font-size:14px; color:var(–muted); line-height:1.65; max-width:340px; font-weight:400; }
+.info-box { background:white; border:1.5px solid var(–border); border-radius:12px; padding:16px 20px; width:100%; text-align:left; }
+.info-box .title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(–blue); margin-bottom:10px; }
+.info-row { display:flex; align-items:center; gap:10px; font-size:13px; color:var(–text); font-weight:500; padding:5px 0; }
+.info-icon { width:28px; height:28px; border-radius:8px; background:var(–light); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+
+/* ── PERMISSION SCREEN ── */
+.perm-card { background:white; border:1.5px solid var(–border); border-radius:16px; padding:28px 24px; display:flex; flex-direction:column; gap:20px; align-items:center; text-align:center; }
+.perm-icon { font-size:52px; }
+.perm-title { font-size:20px; font-weight:800; color:var(–navy); }
+.perm-sub { font-size:13px; color:var(–muted); line-height:1.7; }
+.perm-steps { background:var(–light); border:1.5px solid var(–border); border-radius:12px; padding:16px 18px; width:100%; text-align:left; }
+.perm-step { display:flex; gap:12px; align-items:flex-start; font-size:13px; color:var(–text); padding:5px 0; font-weight:500; }
+.perm-step-num { width:22px; height:22px; border-radius:50%; background:var(–blue); color:white; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.warn-box { background:#FEF9EE; border:1.5px solid var(–gold); border-radius:10px; padding:12px 16px; font-size:12px; color:#7A5C00; width:100%; text-align:left; line-height:1.6; }
+
+/* ── TOAST ── */
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(–navy); color:white; padding:10px 20px; border-radius:50px; font-size:13px; font-weight:600; z-index:999; white-space:nowrap; box-shadow:0 4px 16px rgba(0,0,0,0.25); animation:toastIn 0.3s ease; }
+@keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+/* ── HIDDEN ── */
+.hidden { display:none !important; }
+
+/* ── CONFETTI ── */
+#confetti-canvas { position:fixed; inset:0; pointer-events:none; z-index:998; }
+</style>
+
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<!-- TOP BAR -->
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="uz-flag">
+      <div style="background:#1AA34A"></div>
+      <div style="background:#fff"></div>
+      <div style="background:#0057A8"></div>
+    </div>
+    <div>
+      <div class="topbar-title">O'zbekiston Respublikasi</div>
+      <div class="topbar-sub">Bandlik va Mehnat munosabatlari vazirligi</div>
+    </div>
+  </div>
+  <div class="api-row">
+    <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-ant-...">
+    <button class="api-save" onclick="saveKey()">Saqlash</button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- START SCREEN -->
+
+  <div id="start-screen">
+    <div class="start-emblem">🏛️</div>
+    <div>
+      <div class="start-title">Ish <span>Bor</span></div>
+      <div style="height:6px"></div>
+      <div class="start-sub">Sun'iy intellekt asosidagi kasbiy maslahat va ish qidirish tizimi. Shunchaki gapiring — tizim sizni tinglaydi.</div>
+    </div>
+    <div class="info-box">
+      <div class="title">Tizim imkoniyatlari</div>
+      <div class="info-row"><div class="info-icon">🎙️</div>Ovozli muloqot — yozmang, gapiring</div>
+      <div class="info-row"><div class="info-icon">🤖</div>AI maslahatchi — kasb bo'yicha ekspert</div>
+      <div class="info-row"><div class="info-icon">📋</div>Avtomatik CV tuzish va yuborish</div>
+      <div class="info-row"><div class="info-icon">🔍</div>20 000+ vakansiya bazasida qidiruv</div>
+    </div>
+    <button class="btn-main" onclick="startApp()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+      Maslahatni boshlash
+    </button>
+    <p style="font-size:11px;color:var(--muted)">Mikrofon va kamera ruxsati so'raladi</p>
+  </div>
+
+  <!-- MAIN APP -->
+
+  <div id="main-app" class="hidden" style="display:flex;flex-direction:column;gap:14px;">
+
+```
+<!-- Progress -->
+<div class="progress-section">
+  <div class="progress-header">
+    <div class="progress-step" id="progressLabel">Boshlash</div>
+    <div class="progress-count" id="progressCount">1 / 17</div>
+  </div>
+  <div class="progress-bg"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+</div>
+
+<!-- Character card -->
+<div class="char-card" id="charCard">
+
+  <!-- SVG Agent in suit -->
+  <svg id="agent-svg" viewBox="0 0 160 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="skinGrad" cx="50%" cy="40%" r="60%">
+        <stop offset="0%" stop-color="#FDDCB5"/>
+        <stop offset="100%" stop-color="#F0B886"/>
+      </radialGradient>
+      <radialGradient id="suitGrad" cx="50%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="#1E2E5A"/>
+        <stop offset="100%" stop-color="#0D1B3E"/>
+      </radialGradient>
+    </defs>
+
+    <!-- BODY / SUIT -->
+    <rect id="suit" x="28" y="118" width="104" height="82" rx="18" fill="url(#suitGrad)"/>
+    <!-- suit lapels -->
+    <polygon points="80,120 58,138 68,118" fill="#162040"/>
+    <polygon points="80,120 102,138 92,118" fill="#162040"/>
+    <!-- shirt white -->
+    <rect x="71" y="118" width="18" height="50" fill="#F8FAFF"/>
+    <!-- tie -->
+    <polygon points="80,122 76,145 80,152 84,145" fill="#C9A84C"/>
+    <polygon points="80,122 77,126 80,130 83,126" fill="#E8C56B"/>
+    <!-- buttons -->
+    <circle cx="80" cy="154" r="2" fill="#D1D5E8"/>
+    <circle cx="80" cy="163" r="2" fill="#D1D5E8"/>
+    <!-- pocket square -->
+    <polygon points="38,124 46,124 44,132 36,130" fill="#2E7DF7" opacity="0.8"/>
+
+    <!-- NECK -->
+    <rect x="70" y="108" width="20" height="14" rx="6" fill="url(#skinGrad)"/>
+
+    <!-- HEAD -->
+    <ellipse id="head" cx="80" cy="78" rx="40" ry="44" fill="url(#skinGrad)"/>
+
+    <!-- HAIR -->
+    <ellipse cx="80" cy="38" rx="38" ry="18" fill="#2D1B00"/>
+    <rect x="42" y="36" width="76" height="16" fill="#2D1B00"/>
+    <!-- side hair -->
+    <ellipse cx="42" cy="62" rx="6" ry="14" fill="#2D1B00"/>
+    <ellipse cx="118" cy="62" rx="6" ry="14" fill="#2D1B00"/>
+
+    <!-- EAR -->
+    <ellipse cx="41" cy="80" rx="7" ry="9" fill="url(#skinGrad)"/>
+    <ellipse cx="119" cy="80" rx="7" ry="9" fill="url(#skinGrad)"/>
+    <ellipse cx="41" cy="80" rx="4" ry="6" fill="#E8A87C"/>
+    <ellipse cx="119" cy="80" rx="4" ry="6" fill="#E8A87C"/>
+
+    <!-- EYEBROWS -->
+    <path id="browL" d="M 55 60 Q 65 56 73 60" stroke="#2D1B00" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path id="browR" d="M 87 60 Q 95 56 105 60" stroke="#2D1B00" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+
+    <!-- EYES -->
+    <ellipse id="eyeLw" cx="64" cy="74" rx="12" ry="13" fill="white"/>
+    <ellipse id="eyeRw" cx="96" cy="74" rx="12" ry="13" fill="white"/>
+    <!-- iris -->
+    <ellipse id="eyeLi" cx="64" cy="76" rx="7" ry="8" fill="#1A4BAA"/>
+    <ellipse id="eyeRi" cx="96" cy="76" rx="7" ry="8" fill="#1A4BAA"/>
+    <!-- pupil -->
+    <ellipse cx="64" cy="77" rx="4" ry="4.5" fill="#0D1B3E"/>
+    <ellipse cx="96" cy="77" rx="4" ry="4.5" fill="#0D1B3E"/>
+    <!-- shine -->
+    <ellipse cx="67" cy="72" rx="2.5" ry="2.5" fill="white"/>
+    <ellipse cx="99" cy="72" rx="2.5" ry="2.5" fill="white"/>
+
+    <!-- GLASSES -->
+    <rect x="50" y="64" width="26" height="20" rx="6" fill="none" stroke="#1A1F36" stroke-width="2"/>
+    <rect x="82" y="64" width="26" height="20" rx="6" fill="none" stroke="#1A1F36" stroke-width="2"/>
+    <line x1="76" y1="74" x2="82" y2="74" stroke="#1A1F36" stroke-width="2"/>
+    <line x1="40" y1="72" x2="50" y2="72" stroke="#1A1F36" stroke-width="2"/>
+    <line x1="108" y1="72" x2="118" y2="72" stroke="#1A1F36" stroke-width="2"/>
+
+    <!-- NOSE -->
+    <ellipse cx="80" cy="88" rx="4" ry="3" fill="#E8A87C"/>
+    <path d="M 75 90 Q 80 95 85 90" stroke="#D4956A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+    <!-- MOUTH -->
+    <path id="mouth" d="M 67 100 Q 80 108 93 100" stroke="#B5673A" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path id="teeth" d="M 69 101 Q 80 107 91 101 L 91 105 Q 80 111 69 105 Z" fill="white" opacity="0"/>
+
+    <!-- CHEEKS -->
+    <ellipse id="cheekL" cx="50" cy="92" rx="12" ry="8" fill="#E8A87C" opacity="0"/>
+    <ellipse id="cheekR" cx="110" cy="92" rx="12" ry="8" fill="#E8A87C" opacity="0"/>
+
+    <!-- THINKING DOTS -->
+    <circle id="tdot1" cx="124" cy="52" r="5" fill="var(--gold)" opacity="0"/>
+    <circle id="tdot2" cx="135" cy="40" r="4" fill="var(--gold)" opacity="0"/>
+    <circle id="tdot3" cx="143" cy="30" r="3" fill="var(--gold)" opacity="0"/>
+
+    <!-- LISTEN BARS -->
+    <rect id="lbar1" x="126" y="70" width="4" height="8"  rx="2" fill="var(--success)" opacity="0"/>
+    <rect id="lbar2" x="133" y="64" width="4" height="20" rx="2" fill="var(--success)" opacity="0"/>
+    <rect id="lbar3" x="140" y="68" width="4" height="12" rx="2" fill="var(--success)" opacity="0"/>
+
+    <!-- ARMS -->
+    <rect x="10" y="118" width="22" height="60" rx="11" fill="url(#suitGrad)"/>
+    <rect x="128" y="118" width="22" height="60" rx="11" fill="url(#suitGrad)"/>
+    <!-- hands -->
+    <ellipse cx="21" cy="182" rx="12" ry="10" fill="url(#skinGrad)"/>
+    <ellipse cx="139" cy="182" rx="12" ry="10" fill="url(#skinGrad)"/>
+  </svg>
+
+  <!-- Status -->
+  <div class="status-row">
+    <div class="status-dot idle" id="statusDot"></div>
+    <div class="status-label" id="statusLabel">Tayyor</div>
+  </div>
+
+  <!-- Speech bubble -->
+  <div class="speech-bubble dim" id="speechBubble">Boshlash uchun tugmani bosing...</div>
+
+  <!-- Waveform -->
+  <div class="waveform hidden" id="waveform">
+    <div class="wv"></div><div class="wv"></div><div class="wv"></div><div class="wv"></div>
+    <div class="wv"></div><div class="wv"></div><div class="wv"></div><div class="wv"></div>
+  </div>
+</div>
+
+<!-- Mic -->
+<div class="mic-area" id="micArea">
+  <button class="mic-btn idle" id="micBtn" onclick="toggleMic()" disabled>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+  </button>
+  <div class="mic-hint" id="micHint">Bosib gapiring, qo'yib to'xtating</div>
+</div>
+
+<!-- Vacancy list -->
+<div class="vacancy-section hidden" id="vacancySection">
+  <div class="vacancy-header">Sizga mos vakansiyalar</div>
+  <div id="vacancyList"></div>
+</div>
+
+<!-- CV summary -->
+<div class="cv-card hidden" id="cvCard"></div>
+
+<!-- Camera -->
+<div class="camera-wrap hidden" id="cameraWrap">
+  <video id="camera-video" autoplay playsinline muted></video>
+  <div class="countdown-overlay hidden" id="countdownOverlay">
+    <div class="countdown-num" id="countdownNum">3</div>
+  </div>
+</div>
+<img id="captured-photo" src="" alt="">
+
+<!-- Nav -->
+<div class="btn-row hidden" id="navBtns">
+  <button class="btn btn-ghost" onclick="goBack()">← Orqaga</button>
+  <button class="btn btn-ghost" onclick="resetApp()">↺ Yangi muloqot</button>
+</div>
+```
+
+  </div><!-- /main-app -->
+
+</div><!-- /app -->
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════════
+
+let ANTHROPIC_KEY = localStorage.getItem('ishbor_key') || '';
+if (ANTHROPIC_KEY) document.getElementById('apiKeyInput').value = '••••••••';
+
+function saveKey() {
+  const v = document.getElementById('apiKeyInput').value.trim();
+  if (!v || v.startsWith('•')) return;
+  ANTHROPIC_KEY = v;
+  localStorage.setItem('ishbor_key', v);
+  document.getElementById('apiKeyInput').value = '••••••••';
+  toast('✓ API kaliti saqlandi');
+}
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+
+// ════════════════════════════════════════════════════════
+// STEPS & DATA
+// ════════════════════════════════════════════════════════
+
+const STEPS = [
+  'GREETING','NAME','AGE','LOCATION','EDUCATION',
+  'WORK_HISTORY','SKILLS','EXPERIENCE','REASON_LEFT',
+  'JOB_TYPE','WORK_REGION','SALARY','TRAINING',
+  'MATCHING','VACANCY_SELECTION','CONFIRMATION','PHOTO','FAREWELL'
+];
+
+const STEP_LABELS = {
+  GREETING:'Salomlashish', NAME:"Ism", AGE:"Yosh",
+  LOCATION:"Yashash joyi", EDUCATION:"Ta'lim", WORK_HISTORY:"Ish tarixi",
+  SKILLS:"Ko'nikmalar", EXPERIENCE:"Tajriba", REASON_LEFT:"Ishdan ketish sababi",
+  JOB_TYPE:"Istalgan ish", WORK_REGION:"Ish joyi", SALARY:"Maosh",
+  TRAINING:"Kurslar va o'qitish", MATCHING:"Qidiruv",
+  VACANCY_SELECTION:"Vakansiya tanlash", CONFIRMATION:"Tasdiqlash",
+  PHOTO:"Foto", FAREWELL:"Yakunlash"
+};
+
+const VACANCIES = [
+  {id:1,  title:"Frontend Dasturchi",      company:"Uzum Market",         region:"Toshkent shahri",     salary:"8 000 000",  tags:["IT","React","Remote"],     skills:["IT","dasturlash","programming","frontend","veb"]},
+  {id:2,  title:"Backend Dasturchi",       company:"Click Up",            region:"Toshkent shahri",     salary:"10 000 000", tags:["IT","Java","Python"],      skills:["IT","dasturlash","backend","java","python","node"]},
+  {id:3,  title:"Qurilish ustasi",         company:"Arcon Construction",  region:"Samarqand viloyati",  salary:"5 500 000",  tags:["Qurilish","Tajriba 3+"],   skills:["qurilish","construction","beton","g'isht","proba"]},
+  {id:4,  title:"Elektr montajchi",        company:"UzElektro",           region:"Toshkent viloyati",   salary:"4 800 000",  tags:["Elektr","Sertifikat"],     skills:["elektr","electrical","montaj","kabel","tok"]},
+  {id:5,  title:"Santexnik",               company:"AquaServis",          region:"Farg'ona viloyati",   salary:"4 200 000",  tags:["Santexnika"],              skills:["santexnika","plumbing","quvur","suv","kanalizatsiya"]},
+  {id:6,  title:"Hamshira",                company:"Shifa Klinikasi",     region:"Toshkent shahri",     salary:"3 800 000",  tags:["Tibbiyot","Diplom"],       skills:["tibbiyot","hamshira","healthcare","shifoxona","feldsher"]},
+  {id:7,  title:"Shifokor (terapevt)",     company:"Ibn Sino Shifoxona",  region:"Samarqand viloyati",  salary:"6 500 000",  tags:["Tibbiyot","Diplom"],       skills:["tibbiyot","doctor","shifokor","healthcare","terapevt"]},
+  {id:8,  title:"Maktab o'qituvchisi",     company:"Yangi avlod",         region:"Andijon viloyati",    salary:"3 500 000",  tags:["Ta'lim","Diplom"],         skills:["ta'lim","o'qituvchi","maktab","education","pedagog"]},
+  {id:9,  title:"Til o'qituvchisi",        company:"British Council UZ",  region:"Toshkent shahri",     salary:"5 000 000",  tags:["Ta'lim","Ingliz tili"],    skills:["ta'lim","ingliz","til","education","tutor"]},
+  {id:10, title:"Logist",                  company:"Express Delivery",    region:"Toshkent shahri",     salary:"4 000 000",  tags:["Logistika","B cat."],      skills:["logistika","logistics","transport","haydovchi","yetkazib"]},
+  {id:11, title:"Omborchi",                company:"Korzinka",            region:"Toshkent viloyati",   salary:"3 200 000",  tags:["Logistika","1C"],          skills:["logistika","ombor","warehouse","sklad","1C"]},
+  {id:12, title:"Buxgalter",               company:"Kapitol Group",       region:"Toshkent shahri",     salary:"6 000 000",  tags:["Moliya","1C","Soliq"],     skills:["moliya","buxgalter","finance","1C","soliq","hisob"]},
+  {id:13, title:"Bank xodimi",             company:"Ipoteka Bank",        region:"Toshkent shahri",     salary:"7 000 000",  tags:["Moliya","Bank"],           skills:["moliya","bank","kredit","finance","kassa"]},
+  {id:14, title:"UX/UI Dizayner",          company:"Creative Studio",     region:"Toshkent shahri",     salary:"7 000 000",  tags:["Dizayn","Figma"],          skills:["dizayn","design","figma","UI","UX","grafika"]},
+  {id:15, title:"SMM Menejeri",            company:"Brand Agency",        region:"Toshkent shahri",     salary:"4 500 000",  tags:["Marketing","Content"],     skills:["marketing","smm","instagram","content","reklama"]},
+  {id:16, title:"Savdo menejeri",          company:"Texnomart",           region:"Farg'ona viloyati",   salary:"5 200 000",  tags:["Savdo","KPI"],             skills:["savdo","sales","sotish","menejment","mijoz"]},
+  {id:17, title:"Oshpaz",                  company:"Grand Hotel Tashkent",region:"Toshkent shahri",     salary:"5 500 000",  tags:["Oshpazlik","5 yulduz"],    skills:["oshpazlik","culinary","taom","pazanda","restoran"]},
+  {id:18, title:"Agrotexnik",              company:"Agro Invest UZ",      region:"Qashqadaryo viloyati",salary:"3 800 000",  tags:["Qishloq xo'jaligi"],       skills:["qishloq","agro","agriculture","dehqon","yer"]},
+  {id:19, title:"Tikuvchi-operator",       company:"Textile Park",        company2:"Namangan viloyati", salary:"3 500 000",  tags:["Tikuvchilik","Smenali"],   skills:["tikuv","tikuvchi","sewing","gazlama","ip"]},
+  {id:20, title:"IT Qo'llab-quvvatlash",  company:"Beeline Uzbekistan",  region:"Toshkent shahri",     salary:"5 800 000",  tags:["IT","Helpdesk"],           skills:["IT","kompyuter","texnik","helpdesk","tarmoq"]},
+];
+
+let stepIndex = 0;
+let cv = {
+  name:'', age:null, region:'', district:'', education:'',
+  has_worked:null, previous_jobs:[], skills:[], experience_years:null,
+  reason_left:'', job_type:'', preferred_region:'', expected_salary:'',
+  phone:'', needs_training:null, courses_suggested:[],
+  selected_vacancy:null, photo_taken:false
+};
+let matches = [];
+let isListening = false;
+let isSpeaking = false;
+let recognition = null;
+let inactivityTimer = null;
+let camStream = null;
+let photoDataUrl = null;
+let faceTimer = null;
+let conversationHistory = []; // full dialog for open conversation
+
+// ════════════════════════════════════════════════════════
+// CHARACTER ANIMATION
+// ════════════════════════════════════════════════════════
+
+function setMouth(d) { document.getElementById('mouth').setAttribute('d', d); }
+function setTeeth(op) { document.getElementById('teeth').setAttribute('opacity', op); }
+function setBrowL(d) { document.getElementById('browL').setAttribute('d', d); }
+function setBrowR(d) { document.getElementById('browR').setAttribute('d', d); }
+function setThink(on) {
+  ['tdot1','tdot2','tdot3'].forEach(id => document.getElementById(id).setAttribute('opacity', on ? 0.9 : 0));
+}
+function setListenBars(on) {
+  ['lbar1','lbar2','lbar3'].forEach(id => document.getElementById(id).setAttribute('opacity', on ? 1 : 0));
+}
+function setCheeks(op) {
+  document.getElementById('cheekL').setAttribute('opacity', op);
+  document.getElementById('cheekR').setAttribute('opacity', op);
+}
+function clearFaceTimer() { if (faceTimer) { clearInterval(faceTimer); faceTimer = null; } }
+function resetSvg() {
+  document.getElementById('agent-svg').style.transform = '';
+  document.getElementById('eyeLw').setAttribute('ry', 13);
+  document.getElementById('eyeRw').setAttribute('ry', 13);
+}
+
+const FACE = {
+  NEUTRAL() {
+    clearFaceTimer(); resetSvg();
+    setMouth("M 67 100 Q 80 108 93 100");
+    setBrowL("M 55 60 Q 65 56 73 60"); setBrowR("M 87 60 Q 95 56 105 60");
+    setTeeth(0); setThink(false); setListenBars(false); setCheeks(0);
+    let t = 0;
+    faceTimer = setInterval(() => {
+      t++;
+      if (t % 45 === 0) {
+        ['eyeLw','eyeRw'].forEach(id => document.getElementById(id).setAttribute('ry', 1.5));
+        setTimeout(() => ['eyeLw','eyeRw'].forEach(id => document.getElementById(id).setAttribute('ry', 13)), 110);
+      }
+    }, 100);
+  },
+  SPEAKING() {
+    clearFaceTimer(); resetSvg();
+    setBrowL("M 55 58 Q 65 54 73 58"); setBrowR("M 87 58 Q 95 54 105 58");
+    setThink(false); setListenBars(false); setCheeks(0.25);
+    let t = 0, open = false;
+    faceTimer = setInterval(() => {
+      t++;
+      if (t % 6 === 0) {
+        open = !open;
+        setMouth(open ? "M 67 100 Q 80 112 93 100" : "M 69 102 Q 80 106 91 102");
+        setTeeth(open ? 0.8 : 0);
+      }
+      document.getElementById('agent-svg').style.transform = `translateY(${Math.sin(t*0.08)*3}px)`;
+    }, 80);
+  },
+  LISTENING() {
+    clearFaceTimer(); resetSvg();
+    setMouth("M 68 102 Q 80 106 92 102");
+    setBrowL("M 55 62 Q 65 58 73 62"); setBrowR("M 87 58 Q 95 62 105 58");
+    setTeeth(0); setThink(false); setCheeks(0); setListenBars(true);
+    let t = 0;
+    faceTimer = setInterval(() => {
+      t += 0.05;
+      document.getElementById('agent-svg').style.transform = `rotate(${Math.sin(t)*3}deg)`;
+      const h1 = 8 + Math.sin(t*3)*8;
+      const h2 = 8 + Math.sin(t*3+1)*14;
+      const h3 = 8 + Math.sin(t*3+2)*10;
+      document.getElementById('lbar1').setAttribute('height', Math.max(4,h1));
+      document.getElementById('lbar2').setAttribute('height', Math.max(4,h2));
+      document.getElementById('lbar3').setAttribute('height', Math.max(4,h3));
+    }, 40);
+  },
+  THINKING() {
+    clearFaceTimer(); resetSvg();
+    setMouth("M 70 103 Q 80 100 88 105");
+    setBrowL("M 58 56 Q 65 62 72 58"); setBrowR("M 88 58 Q 95 54 104 60");
+    setTeeth(0); setListenBars(false); setCheeks(0); setThink(true);
+    let ph = 0;
+    faceTimer = setInterval(() => {
+      ph++;
+      if (ph % 20 === 0) {
+        ['tdot1','tdot2','tdot3'].forEach((id,i) => {
+          setTimeout(() => {
+            const el = document.getElementById(id);
+            el.setAttribute('opacity', 1);
+            setTimeout(() => el.setAttribute('opacity', 0.2), 300);
+          }, i * 200);
+        });
+      }
+      document.getElementById('eyeLi').setAttribute('cx', 64 + Math.sin(ph*0.08)*4);
+      document.getElementById('eyeRi').setAttribute('cx', 96 + Math.sin(ph*0.08)*4);
+    }, 80);
+  },
+  HAPPY() {
+    clearFaceTimer(); resetSvg();
+    setMouth("M 62 98 Q 80 114 98 98");
+    setBrowL("M 53 56 Q 63 50 72 56"); setBrowR("M 88 56 Q 97 50 107 56");
+    setTeeth(0.9); setThink(false); setListenBars(false); setCheeks(0.4);
+    let t = 0;
+    faceTimer = setInterval(() => {
+      t += 0.06;
+      document.getElementById('agent-svg').style.transform = `translateY(${Math.sin(t)*5}px)`;
+    }, 30);
+  },
+  CELEBRATING() {
+    clearFaceTimer(); resetSvg();
+    setMouth("M 58 96 Q 80 118 102 96");
+    setBrowL("M 50 52 Q 63 44 74 52"); setBrowR("M 86 52 Q 97 44 110 52");
+    setTeeth(1); setCheeks(0.5); setListenBars(false); setThink(false);
+    let t = 0;
+    faceTimer = setInterval(() => {
+      t += 0.1;
+      document.getElementById('agent-svg').style.transform = `translateY(${Math.abs(Math.sin(t))*-8}px) rotate(${Math.sin(t*2)*6}deg)`;
+    }, 30);
+  },
+  CONFUSED() {
+    clearFaceTimer(); resetSvg();
+    setMouth("M 68 105 Q 80 100 90 106");
+    setBrowL("M 55 58 Q 65 66 72 60"); setBrowR("M 88 60 Q 95 54 106 62");
+    setTeeth(0); setCheeks(0); setListenBars(false); setThink(false);
+    let t = 0;
+    faceTimer = setInterval(() => {
+      t += 0.04;
+      document.getElementById('agent-svg').style.transform = `rotate(${Math.sin(t*0.6)*7}deg)`;
+    }, 40);
+  }
+};
+
+function setEmotion(name) {
+  document.getElementById('agent-svg').style.transform = '';
+  ['eyeLw','eyeRw'].forEach(id => document.getElementById(id).setAttribute('ry', 13));
+  if (FACE[name]) FACE[name]();
+}
+
+// ════════════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════════════
+
+function setStatus(state, label) {
+  const dot = document.getElementById('statusDot');
+  dot.className = `status-dot ${state}`;
+  document.getElementById('statusLabel').textContent = label;
+  const card = document.getElementById('charCard');
+  card.className = `char-card ${state === 'idle' ? '' : state}`;
+}
+
+function setSpeech(text, dim = false) {
+  const el = document.getElementById('speechBubble');
+  el.textContent = text;
+  el.className = `speech-bubble${dim ? ' dim' : ''}`;
+}
+
+function showWave(on) {
+  document.getElementById('waveform').classList.toggle('hidden', !on);
+}
+
+function updateProgress() {
+  const pct = ((stepIndex + 1) / STEPS.length) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = STEP_LABELS[STEPS[stepIndex]] || '';
+  document.getElementById('progressCount').textContent = `${stepIndex + 1} / ${STEPS.length}`;
+}
+
+// ════════════════════════════════════════════════════════
+// TTS — Web Speech
+// ════════════════════════════════════════════════════════
+
+function speak(text) {
+  return new Promise(resolve => {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ru-RU'; // Russian fallback works well on iOS
+    u.rate = 0.92;
+    u.pitch = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const uz = voices.find(v => v.lang.startsWith('uz'));
+    const ru = voices.find(v => v.lang.startsWith('ru'));
+    u.voice = uz || ru || voices[0] || null;
+    u.onend = resolve;
+    u.onerror = resolve;
+    window.speechSynthesis.speak(u);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// CLAUDE API — Expert HR conversation
+// ════════════════════════════════════════════════════════
+
+async function callClaude(userText) {
+  if (!ANTHROPIC_KEY) { toast('⚠️ API kalitini kiriting'); return null; }
+
+  const step = STEPS[stepIndex];
+  const vacCtx = matches.length > 0
+    ? `\nFoydalanuvchiga ko'rsatilgan vakansiyalar:\n${matches.map((v,i)=>`${i+1}. ${v.title} — ${v.company}, ${v.region||v.company2}, ${v.salary} so'm`).join('\n')}`
+    : '';
+
+  // Build system prompt
+  const systemPrompt = `Siz O'zbekiston Bandlik va Mehnat munosabatlari vazirligining sun'iy intellekt asosidagi kasbiy maslahatchisisiz. Ismingiz — Ish Bor.
+
+Sizning vazifangiz:
+1. Fuqaro bilan TABIIY va INSONIY muloqot olib borish
+2. Faqat savol-javob emas — haqiqiy maslahat bering
+3. Agar odam ishsiz bo'lsa — kurslar, qayta tayyorlov imkoniyatlari haqida gapirib bering
+4. Agar odam ishdan ketgan bo'lsa — nima bo'lganini tushunishga harakat qiling
+5. O'zbekistondagi mehnat bozori, kurslar, davlat dasturlari haqida bilim bering
+6. Har doim hurmatli va professional muloqot — "Siz" deb murojaat qiling
+
+Joriy holat:
+- Qadam: ${step}
+- CV ma'lumotlari: ${JSON.stringify(cv)}
+${vacCtx}
+
+Foydalanuvchi: "${userText}"
+
+Javob formatini qaytaring (FAQAT JSON, hech qanday matn yo'q):
+{
+  "updatedCV": {
+    "name": "",
+    "age": null,
+    "region": "",
+    "district": "",
+    "education": "",
+    "has_worked": null,
+    "previous_jobs": [],
+    "skills": [],
+    "experience_years": null,
+    "reason_left": "",
+    "job_type": "",
+    "preferred_region": "",
+    "expected_salary": "",
+    "phone": "",
+    "needs_training": null,
+    "courses_suggested": []
+  },
+  "selected_vacancy_index": null,
+  "nextAction": "CONTINUE",
+  "agentResponse": "Maslahatchi javobi — tabiiy, qisqa, professional. Uzbekcha yoki odam gapirgan tilda."
+}
+
+nextAction qoidalari:
+- "BACK" — orqaga (orqaga/назад/back desa)
+- "STOP" — to'xtatish (to'xtat/стоп/stop desa)
+- "STAY" — shu qadam qolsin (ma'lumot yetarli emas, yana savol bor)
+- "CONTINUE" — keyingi qadam
+
+Qadam bo'yicha extraction:
+GREETING: ha/okay/boshlash → CONTINUE
+NAME: to'liq ism → name
+AGE: yosh → age
+LOCATION: viloyat → region, tuman → district
+EDUCATION: daraja → education
+WORK_HISTORY: ishlagan/ishlamagan → has_worked (true/false), oldingi joylar → previous_jobs massiv
+SKILLS: ko'nikmalar → skills massiv (kamida 2-3 ta)
+EXPERIENCE: yillar → experience_years
+REASON_LEFT: sabab → reason_left
+JOB_TYPE: istalgan ish → job_type
+WORK_REGION: viloyat → preferred_region
+SALARY: maosh → expected_salary
+TRAINING: kurs kerakmi → needs_training (true/false), tavsiya etiladigan kurslar → courses_suggested
+VACANCY_SELECTION: birinchi/1 → index 0, ikkinchi/2 → index 1, uchinchi/3 → index 2
+CONFIRMATION: ha → CONTINUE, yo'q → BACK
+
+MUHIM: agentResponse — bu foydalanuvchiga aytadigan HAQIQIY javob. Tabiiy, issiq, professional bo'lsin. 1-3 gap. Agar WORK_HISTORY qadam va odam hech ishlamagan bo'lsa — kurslar haqida gapirib bering. Agar TRAINING qadam — O'zbekistondagi mavjud kurslar haqida konkret tavsiya bering.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 800,
+        messages: [{ role:'user', content: systemPrompt }]
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) { console.error(data); return null; }
+
+    const raw = data.content[0].text.trim();
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    return JSON.parse(m[0]);
+  } catch(e) {
+    console.error('Claude error:', e);
+    return null;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// VACANCY MATCHING
+// ════════════════════════════════════════════════════════
+
+function matchVacancies() {
+  const scored = VACANCIES.map(v => {
+    let score = 0;
+    cv.skills.forEach(sk => {
+      const s = sk.toLowerCase();
+      if (v.skills.some(vs => vs.toLowerCase().includes(s.substring(0,4)) || s.includes(vs.toLowerCase().substring(0,4)))) score += 3;
+    });
+    if (cv.preferred_region && (v.region||'').toLowerCase().includes(cv.preferred_region.toLowerCase())) score += 2;
+    const salN = parseInt((cv.expected_salary||'').replace(/\D/g,'')) || 0;
+    const vacN = parseInt(v.salary.replace(/\D/g,'')) || 0;
+    if (salN > 0 && vacN >= salN * 0.75) score += 1;
+    return { ...v, score };
+  });
+  return scored.sort((a,b) => b.score - a.score).slice(0, 3);
+}
+
+function renderVacancies() {
+  const list = document.getElementById('vacancyList');
+  list.innerHTML = '';
+  matches.forEach((v, i) => {
+    const c = document.createElement('div');
+    c.className = `vac-card${cv.selected_vacancy?.id===v.id?' selected':''}`;
+    c.innerHTML = `
+      <div class="vac-num">${i+1}</div>
+      <div class="vac-info">
+        <div class="vac-title">${v.title}</div>
+        <div class="vac-company">${v.company} · ${v.region||v.company2||''}</div>
+        <div class="vac-tags">${(v.tags||[]).map(t=>`<span class="vtag">${t}</span>`).join('')}</div>
+      </div>
+      <div>
+        <div class="vac-salary">${v.salary}<span>so'm / oy</span></div>
+      </div>
+    `;
+    c.onclick = () => { cv.selected_vacancy = v; renderVacancies(); };
+    list.appendChild(c);
+  });
+  document.getElementById('vacancySection').classList.remove('hidden');
+}
+
+// ════════════════════════════════════════════════════════
+// MAIN FLOW
+// ════════════════════════════════════════════════════════
+
+const STEP_QUESTIONS = {
+  GREETING: `Assalomu aleykum! O'zbekiston Bandlik va Mehnat munosabatlari vazirligining AI maslahat tizimiga xush kelibsiz. Men — Ish Bor, sizning shaxsiy kasbiy maslahatchingizman. Siz bilan professional ish qidirish va CV tuzish jarayonida birga ishlaymiz. Boshlashga tayyormisiz?`,
+  NAME: `Yaxshi. Avvalo ismingizni bilib olsam — to'liq ism va familiyangizni ayting.`,
+  AGE: `Rahmat. Yoshingiz nechida?`,
+  LOCATION: `Hozirda qaysi viloyat va tumanda yashaysiz?`,
+  EDUCATION: `Ta'limingiz haqida gapirib bering — maktab, kollej, bakalavr, magistr yoki maxsus kurslar?`,
+  WORK_HISTORY: `Ilgari biror joyda ishlaganmisiz? Qayerda, qanday lavozimda?`,
+  SKILLS: `Qanday ko'nikma va bilimlarga egasiz? Barcha sohalarni — dasturlash, qurilish, savdo, tibbiyot, texnik ko'nikmalar — hammasini ayting.`,
+  EXPERIENCE: `Ushbu sohalarda umumiy necha yillik tajribangiz bor?`,
+  REASON_LEFT: `Eng oxirgi ish joyingizdan nima sababdan ketdingiz yoki hozir nega ishlamayapsiz?`,
+  JOB_TYPE: `Ideal ish qanday bo'lishi kerak sizning uchun — qaysi soha, qanday lavozim?`,
+  WORK_REGION: `Qaysi hududda ishlashni afzal ko'rasiz?`,
+  SALARY: `Oylik maosh kutilmangiz qanday? Taxminiy raqam ayting.`,
+  TRAINING: `Kasbiy rivojlanish uchun qo'shimcha kurslar yoki treninglarga qiziqasizmi?`,
+  MATCHING: `Barcha ma'lumotlaringizni tahlil qilyapman. Bir moment...`,
+  VACANCY_SELECTION: `Sizga mos vakansiyalar topildi. Qaysi biri ko'proq qiziqtirdi — birinchi, ikkinchi yoki uchinchi?`,
+  CONFIRMATION: `Ushbu lavozimga arizangizni yuborishimni xohlaysizmi?`,
+  PHOTO: `Tabriklaymiz! Muloqotimiz samarali bo'ldi. Xizmatimiz sizga yoqdimi? Agar ha bo'lsa, kameraga qarab jilmaying — foto yodgorlik uchun!`,
+  FAREWELL: `Arizangiz muvaffaqiyatli yuborildi! Ish beruvchi 1-3 ish kuni ichida siz bilan bog'lanadi. Yangi kasb yo'lida omad tilayman!`
+};
+
+async function runStep(idx) {
+  stepIndex = idx;
+  updateProgress();
+  const step = STEPS[idx];
+
+  if (step === 'PHOTO') {
+    setEmotion('HAPPY');
+    setStatus('speaking', 'Gapiryapman');
+    setSpeech(STEP_QUESTIONS[step]);
+    await speak(STEP_QUESTIONS[step]);
+    await startCamera();
+    await runCountdown();
+    return;
+  }
+
+  if (step === 'FAREWELL') {
+    setEmotion('CELEBRATING');
+    setStatus('speaking', 'Yakunlash');
+    setSpeech(STEP_QUESTIONS[step]);
+    document.getElementById('micArea').style.display = 'none';
+    launchConfetti();
+    renderCVSummary();
+    await speak(STEP_QUESTIONS[step]);
+    return;
+  }
+
+  if (step === 'MATCHING') {
+    setEmotion('THINKING');
+    setStatus('thinking', 'Tahlil qilyapman');
+    setSpeech(STEP_QUESTIONS[step]);
+    await speak(STEP_QUESTIONS[step]);
+    await new Promise(r => setTimeout(r, 800));
+    matches = matchVacancies();
+    renderVacancies();
+    // Describe vacancies
+    const desc = matches.map((v,i)=>`${i===0?'Birinchi':i===1?'Ikkinchi':'Uchinchi'} variant — ${v.title}, ${v.company}da, maoshi ${v.salary} so'm.`).join(' ');
+    const full = `Siz uchun ${matches.length} ta mos vakansiya topdim. ${desc} Qaysi biri ko'proq qiziqtirdi?`;
+    setEmotion('SPEAKING');
+    setStatus('speaking', 'Gapiryapman');
+    setSpeech(full);
+    await speak(full);
+    stepIndex = STEPS.indexOf('VACANCY_SELECTION');
+    updateProgress();
+    await listenAndProcess();
+    return;
+  }
+
+  setEmotion('SPEAKING');
+  setStatus('speaking', 'Gapiryapman');
+  setSpeech(STEP_QUESTIONS[step]);
+  await speak(STEP_QUESTIONS[step]);
+  await listenAndProcess();
+}
+
+async function listenAndProcess() {
+  return new Promise(async resolve => {
+    setEmotion('LISTENING');
+    setStatus('listening', 'Tinglayapman');
+    setSpeech('Gapiring...');
+    showWave(true);
+    document.getElementById('micBtn').className = 'mic-btn recording';
+    document.getElementById('micBtn').disabled = false;
+    isListening = true;
+    startInactivity();
+
+    let finalText = '';
+
+    startRecognition(
+      text => { finalText = text; setSpeech(`"${text}"`); },
+      async () => {
+        clearInactivity();
+        isListening = false;
+        document.getElementById('micBtn').className = 'mic-btn idle';
+        showWave(false);
+
+        if (!finalText.trim()) {
+          setEmotion('CONFUSED');
+          setStatus('idle', 'Eshitmadim');
+          setSpeech('Kechirasiz, eshitmadim...');
+          await speak("Kechirasiz, tushunmadim. Qaytadan aytib bering.");
+          resolve();
+          await listenAndProcess();
+          return;
+        }
+
+        setEmotion('THINKING');
+        setStatus('thinking', "O'ylayapman");
+        setSpeech('Tahlil qilyapman...');
+
+        const result = await callClaude(finalText);
+
+        if (!result) {
+          setEmotion('CONFUSED');
+          await speak("Tizimda xatolik yuz berdi. Qaytadan urinib ko'ramiz.");
+          resolve();
+          await listenAndProcess();
+          return;
+        }
+
+        // Navigation
+        if (result.nextAction === 'BACK') { resolve(); goBack(); return; }
+        if (result.nextAction === 'STOP') {
+          setEmotion('NEUTRAL');
+          await speak("Xop, to'xtadik. Davom etishni xohlasangiz — tugmani bosing.");
+          resolve();
+          return;
+        }
+
+        // Merge CV
+        const u = result.updatedCV || {};
+        for (const [k, v] of Object.entries(u)) {
+          if (v === null || v === undefined) continue;
+          if (typeof v === 'string' && !v.trim()) continue;
+          if (Array.isArray(v) && v.length === 0) continue;
+          cv[k] = v;
+        }
+
+        // Vacancy select
+        if (result.selected_vacancy_index != null && matches[result.selected_vacancy_index]) {
+          cv.selected_vacancy = matches[result.selected_vacancy_index];
+          renderVacancies();
+        }
+
+        // Speak agent response
+        if (result.agentResponse) {
+          setEmotion('SPEAKING');
+          setStatus('speaking', 'Gapiryapman');
+          setSpeech(result.agentResponse);
+          await speak(result.agentResponse);
+        }
+
+        resolve();
+
+        // Navigate
+        if (result.nextAction === 'STAY') {
+          await listenAndProcess();
+        } else {
+          const next = stepIndex + 1;
+          if (next < STEPS.length) await runStep(next);
+        }
+      }
+    );
+  });
+}
+
+function toggleMic() {
+  if (isListening && recognition) recognition.stop();
+}
+
+// ════════════════════════════════════════════════════════
+// SPEECH RECOGNITION
+// ════════════════════════════════════════════════════════
+
+function startRecognition(onResult, onEnd) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    alert("Ovoz tanish faqat Google Chrome brauzerida ishlaydi. Iltimos Chrome oching.");
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = 'uz-UZ';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.onresult = e => {
+    let f = '', interim = '';
+    for (const r of e.results) r.isFinal ? f += r[0].transcript : interim += r[0].transcript;
+    if (f) onResult(f); else setSpeech(`"${interim}"`);
+  };
+  recognition.onend = onEnd;
+  recognition.onerror = e => { console.warn('STT:', e.error); onEnd(); };
+  recognition.start();
+}
+
+// ════════════════════════════════════════════════════════
+// INACTIVITY
+// ════════════════════════════════════════════════════════
+
+function startInactivity() {
+  clearInactivity();
+  inactivityTimer = setTimeout(async () => {
+    if (!isListening) return;
+    if (recognition) recognition.stop();
+    setEmotion('CONFUSED');
+    await speak("O'ylayapsizmi? Shoshilmang, tayyor bo'lganingizda gapiring.");
+  }, 18000);
+}
+
+function clearInactivity() {
+  if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = null; }
+}
+
+// ════════════════════════════════════════════════════════
+// CAMERA
+// ════════════════════════════════════════════════════════
+
+async function startCamera() {
+  document.getElementById('cameraWrap').classList.remove('hidden');
+  document.getElementById('micArea').style.display = 'none';
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:'user'} });
+    document.getElementById('camera-video').srcObject = camStream;
+  } catch(e) {
+    document.getElementById('cameraWrap').classList.add('hidden');
+  }
+}
+
+function runCountdown() {
+  return new Promise(resolve => {
+    const ov = document.getElementById('countdownOverlay');
+    const num = document.getElementById('countdownNum');
+    ov.classList.remove('hidden');
+    let n = 3; num.textContent = n;
+    const iv = setInterval(() => {
+      n--;
+      if (n > 0) {
+        num.textContent = n;
+        num.style.animation = 'none';
+        setTimeout(() => num.style.animation = 'cnt 0.4s cubic-bezier(0.34,1.56,0.64,1)', 10);
+      } else {
+        clearInterval(iv);
+        capturePhoto();
+        resolve();
+      }
+    }, 1000);
+  });
+}
+
+async function capturePhoto() {
+  const vid = document.getElementById('camera-video');
+  const cvs = document.createElement('canvas');
+  cvs.width = vid.videoWidth || 640;
+  cvs.height = vid.videoHeight || 480;
+  cvs.getContext('2d').drawImage(vid, 0, 0);
+  photoDataUrl = cvs.toDataURL('image/jpeg', 0.9);
+  cv.photo_taken = true;
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+  document.getElementById('cameraWrap').classList.add('hidden');
+  document.getElementById('countdownOverlay').classList.add('hidden');
+  const ph = document.getElementById('captured-photo');
+  ph.src = photoDataUrl; ph.style.display = 'block';
+  setEmotion('CELEBRATING');
+  launchConfetti();
+  await speak("Ajoyib! Jilmayishingiz juda chiroyli! Endi arizangizni yuboraman.");
+  await runStep(STEPS.indexOf('FAREWELL'));
+}
+
+// ════════════════════════════════════════════════════════
+// CV SUMMARY
+// ════════════════════════════════════════════════════════
+
+function renderCVSummary() {
+  const v = cv.selected_vacancy;
+  const appId = 'BV-' + Date.now().toString(36).toUpperCase();
+  const el = document.getElementById('cvCard');
+  el.innerHTML = `
+    <div class="cv-header-bar">
+      <div class="cv-photo-wrap">
+        ${photoDataUrl ? `<img src="${photoDataUrl}">` : '<span style="font-size:28px">👤</span>'}
+      </div>
+      <div class="cv-name-block">
+        <div class="name">${cv.name || '—'}</div>
+        <div class="role">${cv.job_type || ''} ${cv.age ? '· ' + cv.age + ' yosh' : ''}</div>
+      </div>
+    </div>
+    <div class="cv-body">
+      <div class="cv-grid">
+        <div class="cv-field"><div class="lbl">📍 Yashash joyi</div><div class="val">${cv.district ? cv.district+', ' : ''}${cv.region||'—'}</div></div>
+        <div class="cv-field"><div class="lbl">🎓 Ta'lim</div><div class="val">${cv.education||'—'}</div></div>
+        <div class="cv-field"><div class="lbl">💼 Tajriba</div><div class="val">${cv.experience_years!=null ? cv.experience_years+' yil' : '—'}</div></div>
+        <div class="cv-field"><div class="lbl">💰 Maosh kutilmasi</div><div class="val">${cv.expected_salary||'—'}</div></div>
+        <div class="cv-field"><div class="lbl">🛠 Ko'nikmalar</div><div class="val">${cv.skills.join(', ')||'—'}</div></div>
+        <div class="cv-field"><div class="lbl">📞 Telefon</div><div class="val">${cv.phone||'—'}</div></div>
+      </div>
+      ${v ? `<div class="cv-vac-box">
+        <div class="lbl">Tanlangan vakansiya</div>
+        <div class="val">${v.title}</div>
+        <div class="sub">${v.company} · ${v.region||''} · ${v.salary} so'm/oy</div>
+      </div>` : ''}
+      ${cv.courses_suggested.length > 0 ? `<div class="cv-vac-box" style="border-color:var(--gold)">
+        <div class="lbl" style="color:var(--gold)">Tavsiya etilgan kurslar</div>
+        <div class="val" style="font-size:13px">${cv.courses_suggested.join(', ')}</div>
+      </div>` : ''}
+    </div>
+    <div class="cv-footer">
+      <div class="sent-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Ariza yuborildi
+      </div>
+      <div class="cv-id">${appId}</div>
+    </div>
+  `;
+  el.classList.remove('hidden');
+}
+
+// ════════════════════════════════════════════════════════
+// CONFETTI
+// ════════════════════════════════════════════════════════
+
+function launchConfetti() {
+  const cvs = document.getElementById('confetti-canvas');
+  cvs.width = innerWidth; cvs.height = innerHeight;
+  const ctx = cvs.getContext('2d');
+  const pieces = Array.from({length:100}, () => ({
+    x: Math.random()*cvs.width, y:-20,
+    w: 8+Math.random()*8, h: 6+Math.random()*6,
+    color: ['#C9A84C','#1A4BAA','#1E8A4C','#2E7DF7','#E8C56B'][Math.floor(Math.random()*5)],
+    speed: 2+Math.random()*4, angle: Math.random()*Math.PI*2,
+    spin: (Math.random()-.5)*.2, drift: (Math.random()-.5)*2
+  }));
+  let raf;
+  function draw() {
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    let alive = 0;
+    pieces.forEach(p => {
+      if (p.y > cvs.height+20) return;
+      alive++; p.y += p.speed; p.x += p.drift; p.angle += p.spin;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.angle);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+    });
+    if (alive > 0) raf = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ════════════════════════════════════════════════════════
+// PERMISSIONS & START
+// ════════════════════════════════════════════════════════
+
+async function startApp() {
+  if (!ANTHROPIC_KEY) { toast('⚠️ Avval API kalitini kiriting va saqlang!'); return; }
+  showPermissionScreen();
+}
+
+function showPermissionScreen() {
+  const ss = document.getElementById('start-screen');
+  ss.innerHTML = `
+    <div class="perm-card">
+      <div class="perm-icon">🎙️</div>
+      <div class="perm-title">Mikrofon ruxsati kerak</div>
+      <div class="perm-sub">Ovozli muloqot uchun brauzer mikrofon ruxsatini so'raydi. Quyidagi tugmani bosing va <strong>"Allow"</strong> ni tanlang.</div>
+      <div class="perm-steps">
+        <div class="perm-step"><div class="perm-step-num">1</div><span>Quyidagi tugmani bosing</span></div>
+        <div class="perm-step"><div class="perm-step-num">2</div><span>Brauzer so'rovida <strong>"Allow / Ruxsat"</strong> ni tanlang</span></div>
+        <div class="perm-step"><div class="perm-step-num">3</div><span>Maslahat boshlanadi</span></div>
+      </div>
+      <div class="warn-box">⚠️ Agar so'rov chiqmasa — manzil satrida 🔒 belgisini bosib, mikrofonga ruxsat bering.</div>
+      <button class="btn-main" onclick="requestAndStart()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+        Ruxsat berish va boshlash
+      </button>
+    </div>
+  `;
+}
+
+async function requestAndStart() {
+  const btn = document.querySelector('#start-screen .btn-main');
+  if (btn) { btn.innerHTML = '⏳ Kutilmoqda...'; btn.disabled = true; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    stream.getTracks().forEach(t => t.stop());
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) throw new Error('no-sr');
+
+    document.getElementById('start-screen').classList.add('hidden');
+    const ma = document.getElementById('main-app');
+    ma.classList.remove('hidden');
+    ma.style.display = 'flex';
+    document.getElementById('navBtns').classList.remove('hidden');
+    document.getElementById('micBtn').disabled = false;
+
+    await runStep(0);
+  } catch(e) {
+    if (e.message === 'no-sr') {
+      showError('Bu brauzer ovoz tanishni qo\'llab-quvvatlamaydi.<br><strong>Google Chrome</strong> da oching.');
+    } else if (e.name === 'NotAllowedError') {
+      showError('Mikrofon bloklangan.<br>🔒 → Mikrofon → Allow → Sahifani yangilang.');
+    } else {
+      showError('Mikrofon topilmadi. Qurilmangizda mikrofon borligini tekshiring.');
+    }
+  }
+}
+
+function showError(msg) {
+  const ss = document.getElementById('start-screen');
+  ss.innerHTML = `
+    <div class="perm-card">
+      <div class="perm-icon">😕</div>
+      <div class="perm-title" style="color:var(--danger)">Ruxsat berilmadi</div>
+      <div class="warn-box" style="background:#FEF2F2;border-color:#FCA5A5;color:#7F1D1D;">${msg}</div>
+      <button class="btn-reload" onclick="location.reload()">🔄 Sahifani yangilash</button>
+      <button onclick="requestAndStart()" style="background:none;border:none;color:var(--blue);font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;margin-top:4px;">↩ Qayta urinish</button>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════
+// RESET / BACK
+// ════════════════════════════════════════════════════════
+
+function goBack() {
+  if (stepIndex > 0) runStep(stepIndex - 1);
+}
+
+function resetApp() {
+  window.speechSynthesis.cancel();
+  if (recognition) recognition.abort();
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+  clearInactivity(); clearFaceTimer();
+  stepIndex = 0;
+  cv = { name:'',age:null,region:'',district:'',education:'',has_worked:null,previous_jobs:[],skills:[],experience_years:null,reason_left:'',job_type:'',preferred_region:'',expected_salary:'',phone:'',needs_training:null,courses_suggested:[],selected_vacancy:null,photo_taken:false };
+  matches = []; photoDataUrl = null; isListening = false;
+  document.getElementById('vacancySection').classList.add('hidden');
+  document.getElementById('cvCard').classList.add('hidden');
+  document.getElementById('cameraWrap').classList.add('hidden');
+  document.getElementById('captured-photo').style.display = 'none';
+  document.getElementById('micArea').style.display = 'flex';
+  document.getElementById('micBtn').className = 'mic-btn idle';
+  showWave(false);
+  setEmotion('NEUTRAL');
+  setStatus('idle', 'Tayyor');
+  setSpeech('Boshlash uchun tugmani bosing...', true);
+  document.getElementById('start-screen').classList.remove('hidden');
+  document.getElementById('main-app').classList.add('hidden');
+}
+
+// INIT
+setEmotion('NEUTRAL');
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+window.speechSynthesis.getVoices();
+</script>
+
+</body>
+</html>
